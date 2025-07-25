@@ -1,5 +1,5 @@
 import React from 'react';
-import { Image as ImageIcon, ListOrdered, Smile, Calendar, MapPin, Globe2, ChevronDown } from 'lucide-react';
+import { Image as ImageIcon, ListOrdered, Smile, Calendar, MapPin, Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 const userAvatar = "https://pbs.twimg.com/profile_images/1638618797188599808/DXIXe_4Q_400x400.jpg";
@@ -20,14 +20,15 @@ const CreatePost = () => {
                 <div className="border-b border-gray-800 mb-4 mt-2"></div>
 
                 <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4 text-blue-500">
-                        <ImageIcon size={20} className="cursor-pointer" />
+                    <div className="flex items-center gap-4 text-blue-400">
+                        <ImageIcon size={20} className="cursor-pointer hover:text-blue-300 transition-colors" />
                     </div>
                     <Button
-                        className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-5 rounded-full disabled:opacity-50 text-base"
+                        className="bg-sky-500 hover:bg-sky-600 text-white font-bold py-2 px-4 rounded-full disabled:opacity-50 text-base flex items-center gap-2 transition-colors"
                         disabled
                     >
-                        Post
+                        <Send size={16} />
+                        <span>Build in Public</span>
                     </Button>
                 </div>
             </div>

@@ -22,7 +22,10 @@ export default function DiscoverPage() {
 
     <div className="flex font-sans h-full">
 
+      {/* 左侧 */}
       <Timeline />
+
+      {/* 右侧 */}
       <div className="flex-1 flex flex-col p-6 py-12">
         <header className="flex justify-between items-center mb-6">
           <div className="flex items-center gap-4">
@@ -40,6 +43,11 @@ export default function DiscoverPage() {
                 <TabsTrigger value="watchlist">Watchlist</TabsTrigger>
               </TabsList>
             </Tabs>
+
+            {/* 用户余额 */}
+            <div className="flex items-center w-full justify-end border border-gray-700 rounded-full px-4 py-2">
+              <span className="text-gray-500">My Balance: 8000 YOLO</span>
+            </div>
           </div>
         </header>
         <CollectionTable />
