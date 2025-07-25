@@ -18,19 +18,19 @@ type ContractService struct{}
 
 var ContractServiceInstance = &ContractService{}
 
-// DeployTokenRequest 部署代币请求
-type DeployTokenRequest struct {
+// DeployStockRequest 部署股票请求
+type DeployStockRequest struct {
 	Name       string `json:"name"`
 	Symbol     string `json:"symbol"`
 	Receiver   string `json:"receiver"`
 	InitialEth string `json:"initial_eth"` // 初始ETH数量（用于支付gas）
 }
 
-// DeployTokenResponse 部署代币响应
-type DeployTokenResponse struct {
+// DeployStockResponse 部署股票响应
+type DeployStockResponse struct {
 	ContractAddress string `json:"contract_address"`
 	TransactionHash string `json:"transaction_hash"`
-	TokenID         string `json:"token_id"`
+	StockID         string `json:"stock_id"`
 }
 
 // SwapRequest 交换请求
@@ -47,8 +47,8 @@ type SwapResponse struct {
 	Price           string `json:"price"`
 }
 
-// DeployToken 部署新的代币合约
-func (cs *ContractService) DeployToken(userID uuid.UUID, req DeployTokenRequest) (*DeployTokenResponse, error) {
+// DeployStock 部署新的股票合约
+func (cs *ContractService) DeployStock(userID uuid.UUID, req DeployStockRequest) (*DeployStockResponse, error) {
 	// 验证接收者地址
 	if !common.IsHexAddress(req.Receiver) {
 		return nil, fmt.Errorf("invalid receiver address")
@@ -76,23 +76,23 @@ func (cs *ContractService) DeployToken(userID uuid.UUID, req DeployTokenRequest)
 	contractAddress := "0x" + fmt.Sprintf("%040x", userID.ID()) // 模拟地址
 	txHash := "0x" + fmt.Sprintf("%064x", userID.ID())          // 模拟交易哈希
 
-	// 在数据库中创建代币记录
-	token := &models.UserToken{
-		UserID:       userID,
-		TokenSymbol:  req.Symbol,
-		TokenName:    req.Name,
-		TotalSupply:  10000.0, // 默认供应量
-		CurrentPrice: 1.0,     // 默认价格
+	// 在数据库中创建股票记录
+	stock := &models.Stock{
+		UserID: userID,
+		Symbol: req.Symbol,
+		Name:   req.Name,
+		Supply: 10000.0, // 使用正确的字段名 Supply 而不是 TotalSupply
+		Price:  1.0,     // 使用正确的字段名 Price 而不是 CurrentPrice
 	}
 
-	if err := database.DB.Create(token).Error; err != nil {
-		return nil, fmt.Errorf("failed to save token to database: %v", err)
+	if err := database.DB.Create(stock).Error; err != nil {
+		return nil, fmt.Errorf("failed to save stock to database: %v", err)
 	}
 
-	return &DeployTokenResponse{
+	return &DeployStockResponse{
 		ContractAddress: contractAddress,
 		TransactionHash: txHash,
-		TokenID:         token.ID.String(),
+		StockID:         stock.ID.String(),
 	}, nil
 }
 
