@@ -1,7 +1,6 @@
 "use client"
-import { CategoryFilter } from "@/components/explore/category-filter";
 import { CollectionTable } from "@/components/explore/collection-table";
-import { Button } from "@/components/ui/button";
+import Timeline from "@/components/explore/timeline";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Search, Plus, Home, Compass, PlusCircle, User } from "lucide-react";
@@ -12,14 +11,19 @@ import Link from "next/link";
 export default function DiscoverPage() {
   return (
     <div className="flex bg-[#141416] text-gray-300 min-h-screen font-sans">
-      <CategoryFilter />
+      {/* 主要内容区域 */}
+      {/* <CategoryFilter /> */}
+      <Timeline />
       <div className="flex-1 flex flex-col p-6">
         <header className="flex justify-between items-center mb-6">
           <div className="flex items-center gap-4">
+            {/* 搜索框 */}
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={20}/>
-              <Input placeholder="Search collections" className="w-80 pl-10 bg-transparent border-gray-700 focus:border-blue-500"/>
+              <Input placeholder="Search" className="w-80 pl-10 bg-transparent border-gray-700 focus:border-blue-500"/>
             </div>
+
+            {/* 榜单选择 */}
             <Tabs defaultValue="top">
               <TabsList>
                 <TabsTrigger value="top">Top</TabsTrigger>
@@ -27,16 +31,6 @@ export default function DiscoverPage() {
                 <TabsTrigger value="watchlist">Watchlist</TabsTrigger>
               </TabsList>
             </Tabs>
-          </div>
-          <div className="flex items-center gap-2">
-             <Button variant="ghost" size="sm">All</Button>
-             <Button variant="ghost" size="sm">30d</Button>
-             <Button variant="secondary" size="sm">7d</Button>
-             <Button variant="ghost"size="sm">1d</Button>
-             <Button variant="ghost" size="sm">1h</Button>
-             <Button variant="ghost" size="sm">15m</Button>
-             <Button variant="ghost" size="sm">5m</Button>
-             <Button variant="ghost" size="sm">1m</Button>
           </div>
         </header>
         <CollectionTable />
