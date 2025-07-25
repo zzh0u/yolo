@@ -5,6 +5,9 @@ import { useRouter } from 'next/navigation';
 import Stepper, { Step } from './components/Stepper';
 import CardSwap, { Card } from './components/CardSwap';
 import Beams from './components/Beams';
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
+const center = 'flex items-center justify-center';
 
 export default function CreatePage() {
   const router = useRouter();
@@ -21,7 +24,7 @@ export default function CreatePage() {
       <div className="min-h-screen flex flex-col xl:flex-row">
         
         {/* 左侧 Stepper - 响应式 */}
-        <div className="flex-1 xl:flex-none xl:w-[40%] relative overflow-hidden flex items-center justify-center">
+        <div className={cn(center,'flex-1 xl:flex-none xl:w-[40%] relative overflow-hidden') }>
           {/* 左侧 3D 背景 */}
           <div className="absolute inset-0 z-0">
             <Beams beamWidth={1.2} beamHeight={18} beamNumber={8} lightColor="#ffffff" speed={1.2} noiseIntensity={1.2} scale={0.22} rotation={0} />
@@ -70,14 +73,14 @@ export default function CreatePage() {
                     <p className="text-primary font-medium">你的社交货币: {tokenName}</p>
                   </div>
                 )}
-                <button className="px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary/90 transition-all">完成</button>
+                <Button variant="white" className="px-6 py-3">完成</Button>
               </Step>
             </Stepper>
           </div>
         </div>
 
         {/* 右侧 CardSwap + 3D 背景 - 放大和优化 */}
-        <div className="flex-1 xl:flex-none xl:w-[60%] relative min-h-[600px] xl:min-h-screen overflow-hidden flex items-center justify-center">
+        <div className={cn(center,'flex-1 xl:flex-none xl:w-[60%] relative min-h-[600px] xl:min-h-screen overflow-hidden')}>
           {/* 3D Beams 背景 */}
           <div className="absolute inset-0 z-0">
             <Beams
@@ -93,7 +96,7 @@ export default function CreatePage() {
           </div>
           
           {/* CardSwap 前景 */}
-          <div className="relative z-10 w-full h-full flex items-center justify-center p-8 -translate-y-12">
+          <div className={cn(center,'relative z-10 w-full h-full p-8 -translate-y-12') }>
             <CardSwap 
               cardDistance={120} 
               verticalDistance={80} 

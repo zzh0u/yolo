@@ -71,16 +71,16 @@ export default function Stepper({
                 <div
                   className={`
                     flex items-center justify-center w-8 h-8 rounded-full text-sm font-medium
-                    ${isCompleted 
-                      ? 'bg-primary text-primary-foreground' 
-                      : isCurrent 
-                        ? 'bg-primary text-primary-foreground' 
-                        : 'bg-muted text-muted-foreground'
+                    ${isCompleted
+                      ? 'bg-muted text-black' // Set text to black for completed steps
+                      : isCurrent
+                      ? 'bg-primary text-primary-foreground'
+                      : 'bg-muted text-muted-foreground'
                     }
                   `}
                 >
                   {isCompleted ? (
-                    <Check className="w-4 h-4" />
+                    '完成'
                   ) : (
                     stepNumber
                   )}
@@ -123,6 +123,7 @@ export default function Stepper({
 
           <Button
             onClick={goToNextStep}
+            variant={currentStep === totalSteps ? 'white' : 'default'}
             className="flex items-center gap-2"
           >
             {currentStep === totalSteps ? 'Complete' : nextButtonText}
@@ -132,4 +133,4 @@ export default function Stepper({
       </CardContent>
     </Card>
   );
-} 
+}

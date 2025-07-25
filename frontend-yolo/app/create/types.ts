@@ -19,8 +19,26 @@ export const CATEGORIES = [
   { value: 'education', label: '教育' },
 ] as const;
 
+
+export interface CardProps extends React.ComponentProps<'div'> {
+  children: React.ReactNode;
+}
+
+export interface CardSwapProps {
+  children: React.ReactNode;
+  cardDistance?: number;
+  verticalDistance?: number;
+  delay?: number;
+  pauseOnHover?: boolean;
+  width?: number | string;
+  height?: number | string;
+  skewAmount?: number;
+  easing?: "linear" | "elastic";
+  onCardClick?: (idx: number) => void;
+}
+
 export const PRIORITY_OPTIONS = [
   { value: 'low', label: '低优先级', color: 'text-green-600' },
   { value: 'medium', label: '中优先级', color: 'text-yellow-600' },
   { value: 'high', label: '高优先级', color: 'text-red-600' },
-] as const; 
+] as const;
