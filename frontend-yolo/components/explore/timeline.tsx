@@ -224,7 +224,7 @@ const StatIcon = ({ icon: Icon, count, colorClass }: { icon: React.ElementType, 
 const Timeline = () => {
   return (
 
-    <div className="w-full max-w-2xl mx-auto text-white h-screen flex flex-col">
+    <div className="w-full max-w-2xl mx-auto text-white h-screen flex flex-col px-12 py-12">
       <CreatePost />
       <div className="flex-1 overflow-y-auto">
         {threads.map(thread => (

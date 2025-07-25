@@ -3,18 +3,27 @@ import { CollectionTable } from "@/components/explore/collection-table";
 import Timeline from "@/components/explore/timeline";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Search, Plus, Home, Compass, PlusCircle, User } from "lucide-react";
+import { Search, Home, PlusCircle, User } from "lucide-react";
 import GlassSurface from "@/components/react-bits/glass-surface";
+import TextPressure from "@/components/react-bits/text-pressure";
 import Link from "next/link";
 
 
 export default function DiscoverPage() {
   return (
-    <div className="flex bg-[#141416] text-gray-300 min-h-screen font-sans">
-      {/* 主要内容区域 */}
-      {/* <CategoryFilter /> */}
+    <div className="flex flex-col h-auto w-screen bg-[#141416] text-gray-300">
+      <div className="w-full h-42 flex items-center justify-center px-24">
+        <TextPressure 
+          text="You Only Live Once" 
+          scale={false}
+          italic={true}
+        />
+      </div>
+
+    <div className="flex font-sans h-full">
+
       <Timeline />
-      <div className="flex-1 flex flex-col p-6">
+      <div className="flex-1 flex flex-col p-6 py-12">
         <header className="flex justify-between items-center mb-6">
           <div className="flex items-center gap-4">
             {/* 搜索框 */}
@@ -59,6 +68,7 @@ export default function DiscoverPage() {
           </div>
         </GlassSurface>
       </div>
+    </div>
     </div>
   );
 }
