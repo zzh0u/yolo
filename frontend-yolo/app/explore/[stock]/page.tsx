@@ -1,5 +1,6 @@
 "use client";
 import { useParams } from "next/navigation";
+import { useState } from "react";
 import StockHeader from "@/components/detail/product-header";
 import StatsBar from "@/components/detail/stats-bar";
 import SwapPanel from "@/components/detail/swap-panel";
@@ -14,6 +15,8 @@ import { Home, Compass, PlusCircle, User } from "lucide-react";
 
 export default function ProductPage() {
     const { stock } = useParams();
+    const [selectedDate, setSelectedDate] = useState<string | null>(null);
+
     // Static data based on the new screenshot
     const staticData = {
         name: "Cohol",
@@ -27,18 +30,7 @@ export default function ProductPage() {
         marketCapChange: "+97.1%",
     };
 
-    const initialData = [
-      { time: '2018-12-22', value: 32.51 },
-      { time: '2018-12-23', value: 31.11 },
-      { time: '2018-12-24', value: 27.02 },
-      { time: '2018-12-25', value: 27.32 },
-      { time: '2018-12-26', value: 25.17 },
-      { time: '2018-12-27', value: 28.89 },
-      { time: '2018-12-28', value: 25.46 },
-      { time: '2018-12-29', value: 23.92 },
-      { time: '2018-12-30', value: 22.68 },
-      { time: '2018-12-31', value: 22.67 },
-  ];
+
 
     return (
         <div className="flex min-h-screen bg-zinc-950 text-white">
@@ -54,7 +46,7 @@ export default function ProductPage() {
                             price={staticData.price}
                             change={staticData.change}
                         />
-                        <TradingViewChart data={initialData} />
+                        <TradingViewChart onTimeClick={setSelectedDate} />
                         <StatsBar
                             chain={staticData.chain}
                             marketCap={staticData.marketCap}
@@ -69,7 +61,7 @@ export default function ProductPage() {
                 </div>
 
                 <div className="mt-12 min-h-screen">
-                    <Tabs defaultValue="overview" className="w-full">
+                    <Tabs defaultValue="activity" className="w-full">
                         <TabsList className="border-b border-zinc-800 rounded-none p-0 h-auto bg-transparent justify-start gap-6">
                             <TabsTrigger value="overview" className="data-[state=active]:bg-transparent data-[state=active]:text-white data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-white rounded-none px-1 py-3 text-zinc-400">概况</TabsTrigger>
                             <TabsTrigger value="activity" className="data-[state=active]:bg-transparent data-[state=active]:text-white data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-white rounded-none px-1 py-3 text-zinc-400">动态</TabsTrigger>
@@ -79,7 +71,7 @@ export default function ProductPage() {
                             <OverviewTab />
                         </TabsContent>
                         <TabsContent value="activity" className="mt-6">
-                            <ActivityTab />
+                            <ActivityTab highlightDate={selectedDate || undefined} />
                         </TabsContent>
                         <TabsContent value="contact" className="mt-6">
                             <ContactTab />
