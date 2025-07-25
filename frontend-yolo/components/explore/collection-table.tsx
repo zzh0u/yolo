@@ -8,6 +8,7 @@ import {
     TableRow,
   } from "@/components/ui/table";
   import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+  import Image from "next/image"
   import { Badge } from "@/components/ui/badge";
   import { MiniLineChart } from "./line-chart";
   import { Star, BadgeCheck, Lightbulb, Box, PlayCircle, TrendingUp } from "lucide-react";
@@ -149,7 +150,7 @@ import {
                     <Star className="text-gray-600 hover:text-yellow-400 cursor-pointer" size={16}/>
                     <span className="text-gray-400 w-6 text-sm">{index + 1}</span>
                     <Avatar>
-                      <AvatarImage src={collection.img} />
+                      <AvatarImage src="/img/sam.png" />
                       <AvatarFallback>{collection.name.charAt(0)}</AvatarFallback>
                     </Avatar>
                     <div className="font-semibold text-white flex items-center gap-1">

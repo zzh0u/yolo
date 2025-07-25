@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import GlassSurface from "@/components/react-bits/glass-surface";
-import { PlusCircle, Compass, User} from "lucide-react";
+import { PlusCircle, Compass } from "lucide-react";
+import { Avatar, AvatarImage, AvatarFallback } from "./ui/avatar";
 
 export default function Navbar() {
   const pathname = usePathname();
@@ -38,7 +39,10 @@ export default function Navbar() {
             Discover
           </Link>
           <Link href="/profile" className={`text-white hover:text-gray-300 transition-colors flex items-center gap-1 ${isActive("/me")}`}>
-            <User size={18} />
+            <Avatar className="size-6">
+              <AvatarImage src="/img/elon.png" />
+              <AvatarFallback>U</AvatarFallback>
+            </Avatar>
             Me
           </Link>
         </div>
