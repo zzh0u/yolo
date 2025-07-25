@@ -59,14 +59,14 @@ func DeployToken(c *gin.Context) {
 	}
 
 	// 调用合约服务部署代币
-	deployReq := services.DeployTokenRequest{
+	deployReq := services.DeployStockRequest{
 		Name:       req.Name,
 		Symbol:     req.Symbol,
 		Receiver:   req.Receiver,
 		InitialEth: req.InitialEth,
 	}
 
-	result, err := services.ContractServiceInstance.DeployToken(userID, deployReq)
+	result, err := services.ContractServiceInstance.DeployStock(userID, deployReq)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error":   "Failed to deploy token",
