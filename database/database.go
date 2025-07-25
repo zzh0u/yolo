@@ -114,9 +114,11 @@ func AutoMigrate() error {
 	// 自动迁移所有模型
 	err := DB.AutoMigrate(
 		&models.User{},
-		&models.UserToken{},
+		&models.Post{},
+		&models.Stock{},
 		&models.UserHolding{},
-		&models.PriceHistory{},
+		&models.Trade{},
+		&models.ChartData{},
 		&models.GiftRecord{},
 	)
 
