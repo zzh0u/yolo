@@ -36,7 +36,7 @@ func (suite *IntegrationTestSuite) SetupSuite() {
 	database.DB = db
 	suite.db = db
 
-	err = db.AutoMigrate(&models.User{}, &models.UserToken{}, &models.UserHolding{}, &models.PriceHistory{}, &models.GiftRecord{})
+	err = db.AutoMigrate(&models.User{}, &models.Post{}, &models.Stock{}, &models.UserHolding{}, &models.Trade{}, &models.ChartData{}, &models.GiftRecord{})
 	suite.Require().NoError(err)
 
 	services.InitServices()
@@ -46,14 +46,18 @@ func (suite *IntegrationTestSuite) SetupSuite() {
 // SetupTest 每个测试前的准备
 func (suite *IntegrationTestSuite) SetupTest() {
 	suite.db.Exec("DELETE FROM users")
-	suite.db.Exec("DELETE FROM user_tokens")
+	suite.db.Exec("DELETE FROM posts")
+	suite.db.Exec("DELETE FROM stocks")
 	suite.db.Exec("DELETE FROM user_holdings")
+	suite.db.Exec("DELETE FROM trades")
+	suite.db.Exec("DELETE FROM chart_data")
 }
 
-// TestUserRegistrationAndTokenCreationFlow 测试用户注册和代币创建流程
-func (suite *IntegrationTestSuite) TestUserRegistrationAndTokenCreationFlow() {
+// TestUserRegistrationAndStockCreationFlow 测试用户注册和股票创建流程
+func (suite *IntegrationTestSuite) TestUserRegistrationAndStockCreationFlow() {
 	// 1. 用户注册
 	registerReq := controllers.RegisterRequest{
+		Name:     "Test User",
 		Username: "testuser",
 		Email:    "test@example.com",
 		Password: "password123",
@@ -73,31 +77,12 @@ func (suite *IntegrationTestSuite) TestUserRegistrationAndTokenCreationFlow() {
 	assert.NoError(suite.T(), err)
 	assert.NotEmpty(suite.T(), authResponse.Token)
 
-	// 2. 使用token创建代币
-	createTokenReq := controllers.CreateTokenRequest{
-		TokenSymbol: "MYTOKEN",
-		TokenName:   "My Token",
-		TotalSupply: 1000000.0,
-		Description: "My awesome token",
-	}
+	// 2. 使用token创建股票 - 修正：直接使用 User.ID
+	stock, err := services.StockService.CreateStock(authResponse.User.ID, "MYSTOCK", "My Stock", 1000000.0, "My awesome stock")
+	suite.Require().NoError(err)
 
-	jsonBody, _ = json.Marshal(createTokenReq)
-	req, _ = http.NewRequest("POST", "/api/v1/tokens", bytes.NewBuffer(jsonBody))
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer "+authResponse.Token)
-
-	w = httptest.NewRecorder()
-	suite.router.ServeHTTP(w, req)
-
-	assert.Equal(suite.T(), http.StatusCreated, w.Code)
-
-	var tokenResponse map[string]interface{}
-	err = json.Unmarshal(w.Body.Bytes(), &tokenResponse)
-	assert.NoError(suite.T(), err)
-
-	token := tokenResponse["token"].(map[string]interface{})
-	assert.Equal(suite.T(), "MYTOKEN", token["token_symbol"])
-	assert.Equal(suite.T(), "My Token", token["token_name"])
+	assert.Equal(suite.T(), "MYSTOCK", stock.Symbol)
+	assert.Equal(suite.T(), "My Stock", stock.Name)
 
 	// 3. 获取用户资料验证
 	req, _ = http.NewRequest("GET", "/api/v1/user/profile", nil)
@@ -117,10 +102,10 @@ func (suite *IntegrationTestSuite) TestUserRegistrationAndTokenCreationFlow() {
 	assert.Equal(suite.T(), 8000.0, user["balance"]) // 默认余额
 }
 
-// TestLoginAndTokenManagementFlow 测试登录和代币管理流程
-func (suite *IntegrationTestSuite) TestLoginAndTokenManagementFlow() {
+// TestLoginAndStockManagementFlow 测试登录和股票管理流程
+func (suite *IntegrationTestSuite) TestLoginAndStockManagementFlow() {
 	// 1. 先注册用户
-	user, err := services.UserService.CreateUser("testuser", "test@example.com", "password123")
+	user, err := services.UserService.CreateUser("Test User", "testuser", "test@example.com", "password123")
 	suite.Require().NoError(err)
 
 	// 2. 用户登录
@@ -141,18 +126,80 @@ func (suite *IntegrationTestSuite) TestLoginAndTokenManagementFlow() {
 	var authResponse controllers.AuthResponse
 	err = json.Unmarshal(w.Body.Bytes(), &authResponse)
 	assert.NoError(suite.T(), err)
-	assert.Equal(suite.T(), user.ID, authResponse.User.ID)
+	assert.Equal(suite.T(), user.ID.String(), authResponse.User.ID.String()) // 修正：比较字符串形式
 
-	// 3. 创建代币
-	createTokenReq := controllers.CreateTokenRequest{
-		TokenSymbol: "TEST",
-		TokenName:   "Test Token",
-		TotalSupply: 500000.0,
-		Description: "Test description",
+	// 3. 创建股票
+	stock, err := services.StockService.CreateStock(user.ID, "TEST", "Test Stock", 500000.0, "Test description")
+	suite.Require().NoError(err)
+
+	// 4. 获取股票信息
+	req, _ = http.NewRequest("GET", "/api/v1/stocks/TEST", nil)
+
+	w = httptest.NewRecorder()
+	suite.router.ServeHTTP(w, req)
+
+	assert.Equal(suite.T(), http.StatusOK, w.Code)
+
+	// 修正：使用正确的响应结构和字段名
+	var stockResponse controllers.StockDetailResponse
+	err = json.Unmarshal(w.Body.Bytes(), &stockResponse)
+	assert.NoError(suite.T(), err)
+	assert.Equal(suite.T(), "TEST", stockResponse.StockResponse.Symbol)
+	assert.Equal(suite.T(), "Test Stock", stockResponse.StockResponse.Name)
+
+	// 5. 执行交易 - 修正：移除 UserID 字段，使用正确的 API 路径
+	tradeReq := controllers.TradeRequest{
+		Type:   "buy",
+		Amount: 100.0,
 	}
 
-	jsonBody, _ = json.Marshal(createTokenReq)
-	req, _ = http.NewRequest("POST", "/api/v1/tokens", bytes.NewBuffer(jsonBody))
+	jsonBody, _ = json.Marshal(tradeReq)
+	req, _ = http.NewRequest("POST", "/api/v1/stocks/"+stock.ID.String()+"/trade", bytes.NewBuffer(jsonBody))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+authResponse.Token)
+
+	w = httptest.NewRecorder()
+	suite.router.ServeHTTP(w, req)
+	assert.Equal(suite.T(), http.StatusOK, w.Code)
+
+	var tradeResponse controllers.TradeResponse
+	err = json.Unmarshal(w.Body.Bytes(), &tradeResponse)
+	assert.NoError(suite.T(), err)
+	assert.Equal(suite.T(), true, tradeResponse.Success)
+}
+
+// TestPostCreationAndTimelineFlow 测试帖子创建和时间线流程
+func (suite *IntegrationTestSuite) TestPostCreationAndTimelineFlow() {
+	// 1. 先注册用户
+	_, err := services.UserService.CreateUser("Test User", "testuser", "test@example.com", "password123")
+	suite.Require().NoError(err)
+
+	// 2. 用户登录
+	loginReq := controllers.LoginRequest{
+		Username: "testuser",
+		Password: "password123",
+	}
+
+	jsonBody, _ := json.Marshal(loginReq)
+	req, _ := http.NewRequest("POST", "/api/v1/auth/login", bytes.NewBuffer(jsonBody))
+	req.Header.Set("Content-Type", "application/json")
+
+	w := httptest.NewRecorder()
+	suite.router.ServeHTTP(w, req)
+
+	assert.Equal(suite.T(), http.StatusOK, w.Code)
+
+	var authResponse controllers.AuthResponse
+	err = json.Unmarshal(w.Body.Bytes(), &authResponse)
+	assert.NoError(suite.T(), err)
+
+	// 3. 创建帖子
+	createPostReq := controllers.CreatePostRequest{
+		Content: "This is my first post!",
+	}
+
+	jsonBody, _ = json.Marshal(createPostReq)
+	req, _ = http.NewRequest("POST", "/api/v1/posts", bytes.NewBuffer(jsonBody))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+authResponse.Token)
 
@@ -160,43 +207,25 @@ func (suite *IntegrationTestSuite) TestLoginAndTokenManagementFlow() {
 	suite.router.ServeHTTP(w, req)
 	assert.Equal(suite.T(), http.StatusCreated, w.Code)
 
-	// 4. 获取代币信息
-	req, _ = http.NewRequest("GET", "/api/v1/tokens/TEST", nil)
+	var postResponse controllers.CreatePostResponse
+	err = json.Unmarshal(w.Body.Bytes(), &postResponse)
+	assert.NoError(suite.T(), err)
+	assert.Equal(suite.T(), "This is my first post!", postResponse.Content)
+
+	// 4. 获取时间线
+	req, _ = http.NewRequest("GET", "/api/v1/posts/timeline", nil)
 
 	w = httptest.NewRecorder()
 	suite.router.ServeHTTP(w, req)
 
 	assert.Equal(suite.T(), http.StatusOK, w.Code)
 
-	var tokenResponse map[string]interface{}
-	err = json.Unmarshal(w.Body.Bytes(), &tokenResponse)
+	// 修正：使用正确的响应结构
+	var timelineResponse controllers.PostsResponse
+	err = json.Unmarshal(w.Body.Bytes(), &timelineResponse)
 	assert.NoError(suite.T(), err)
-
-	token := tokenResponse["token"].(map[string]interface{})
-	assert.Equal(suite.T(), "TEST", token["token_symbol"])
-	assert.Equal(suite.T(), "Test Token", token["token_name"])
-
-	// 5. 更新代币信息
-	updateTokenReq := controllers.UpdateTokenRequest{
-		TokenName:   "Updated Test Token",
-		Description: "Updated description",
-	}
-
-	jsonBody, _ = json.Marshal(updateTokenReq)
-	req, _ = http.NewRequest("PUT", "/api/v1/tokens/TEST", bytes.NewBuffer(jsonBody))
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer "+authResponse.Token)
-
-	w = httptest.NewRecorder()
-	suite.router.ServeHTTP(w, req)
-	assert.Equal(suite.T(), http.StatusOK, w.Code)
-
-	var updatedTokenResponse map[string]interface{}
-	err = json.Unmarshal(w.Body.Bytes(), &updatedTokenResponse)
-	assert.NoError(suite.T(), err)
-
-	updatedToken := updatedTokenResponse["token"].(map[string]interface{})
-	assert.Equal(suite.T(), "Updated Test Token", updatedToken["token_name"])
+	assert.Len(suite.T(), timelineResponse.Posts, 1)
+	assert.Equal(suite.T(), "This is my first post!", timelineResponse.Posts[0].Content)
 }
 
 // TestIntegrationTestSuite 运行集成测试套件

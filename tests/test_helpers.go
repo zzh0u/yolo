@@ -34,9 +34,11 @@ func SetupTestEnvironment() (*gorm.DB, error) {
 	// 自动迁移
 	err = db.AutoMigrate(
 		&models.User{},
-		&models.UserToken{},
+		&models.Post{},
+		&models.Stock{},
 		&models.UserHolding{},
-		&models.PriceHistory{},
+		&models.Trade{},
+		&models.ChartData{},
 		&models.GiftRecord{},
 	)
 	if err != nil {

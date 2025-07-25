@@ -26,7 +26,7 @@ func (suite *ServicesTestSuite) SetupSuite() {
 	database.DB = db
 	suite.db = db
 
-	err = db.AutoMigrate(&models.User{}, &models.UserToken{}, &models.UserHolding{}, &models.PriceHistory{}, &models.GiftRecord{})
+	err = db.AutoMigrate(&models.User{}, &models.Post{}, &models.Stock{}, &models.UserHolding{}, &models.Trade{}, &models.ChartData{}, &models.GiftRecord{})
 	suite.Require().NoError(err)
 
 	services.InitServices()
@@ -35,16 +35,20 @@ func (suite *ServicesTestSuite) SetupSuite() {
 // SetupTest 每个测试前的准备
 func (suite *ServicesTestSuite) SetupTest() {
 	suite.db.Exec("DELETE FROM users")
-	suite.db.Exec("DELETE FROM user_tokens")
+	suite.db.Exec("DELETE FROM posts")
+	suite.db.Exec("DELETE FROM stocks")
 	suite.db.Exec("DELETE FROM user_holdings")
+	suite.db.Exec("DELETE FROM trades")
+	suite.db.Exec("DELETE FROM chart_data")
 }
 
 // TestUserService_CreateUser 测试创建用户
 func (suite *ServicesTestSuite) TestUserService_CreateUser() {
-	user, err := services.UserService.CreateUser("testuser", "test@example.com", "password123")
+	user, err := services.UserService.CreateUser("Test User", "testuser", "test@example.com", "password123")
 
 	assert.NoError(suite.T(), err)
 	assert.NotNil(suite.T(), user)
+	assert.Equal(suite.T(), "Test User", user.Name)
 	assert.Equal(suite.T(), "testuser", user.Username)
 	assert.Equal(suite.T(), "test@example.com", user.Email)
 	assert.Equal(suite.T(), 8000.0, user.Balance)
@@ -55,7 +59,7 @@ func (suite *ServicesTestSuite) TestUserService_CreateUser() {
 // TestUserService_IsUsernameExists 测试检查用户名是否存在
 func (suite *ServicesTestSuite) TestUserService_IsUsernameExists() {
 	// 创建用户
-	_, err := services.UserService.CreateUser("testuser", "test@example.com", "password123")
+	_, err := services.UserService.CreateUser("Test User", "testuser", "test@example.com", "password123")
 	suite.Require().NoError(err)
 
 	// 检查存在的用户名
@@ -70,7 +74,7 @@ func (suite *ServicesTestSuite) TestUserService_IsUsernameExists() {
 // TestUserService_ValidateUser 测试验证用户凭据
 func (suite *ServicesTestSuite) TestUserService_ValidateUser() {
 	// 创建用户
-	createdUser, err := services.UserService.CreateUser("testuser", "test@example.com", "password123")
+	createdUser, err := services.UserService.CreateUser("Test User", "testuser", "test@example.com", "password123")
 	suite.Require().NoError(err)
 
 	// 验证正确的凭据
@@ -87,61 +91,100 @@ func (suite *ServicesTestSuite) TestUserService_ValidateUser() {
 	assert.Error(suite.T(), err)
 }
 
-// TestTokenService_CreateToken 测试创建代币
-func (suite *ServicesTestSuite) TestTokenService_CreateToken() {
+// TestPostService_CreatePost 测试创建帖子
+func (suite *ServicesTestSuite) TestPostService_CreatePost() {
 	// 先创建用户
-	user, err := services.UserService.CreateUser("testuser", "test@example.com", "password123")
+	user, err := services.UserService.CreateUser("Test User", "testuser", "test@example.com", "password123")
 	suite.Require().NoError(err)
 
-	// 创建代币
-	token, err := services.TokenService.CreateToken(user.ID, "TEST", "Test Token", 1000000.0, "A test token")
+	// 创建帖子
+	post, err := services.PostService.CreatePost(user.ID, "This is a test post")
 
 	assert.NoError(suite.T(), err)
-	assert.NotNil(suite.T(), token)
-	assert.Equal(suite.T(), user.ID, token.UserID)
-	assert.Equal(suite.T(), "TEST", token.TokenSymbol)
-	assert.Equal(suite.T(), "Test Token", token.TokenName)
-	assert.Equal(suite.T(), 1000000.0, token.TotalSupply)
-	assert.Equal(suite.T(), 1.0, token.CurrentPrice)
-	assert.NotNil(suite.T(), token.Description)
-	assert.Equal(suite.T(), "A test token", *token.Description)
+	assert.NotNil(suite.T(), post)
+	assert.Equal(suite.T(), user.ID, post.UserID)
+	assert.Equal(suite.T(), "This is a test post", post.Content)
+	// 移除不存在的字段检查
+	// assert.Equal(suite.T(), 0, post.LikesCount)
+	// assert.Equal(suite.T(), 0, post.CommentsCount)
 }
 
-// TestTokenService_IsTokenSymbolExists 测试检查代币符号是否存在
-func (suite *ServicesTestSuite) TestTokenService_IsTokenSymbolExists() {
-	// 先创建用户和代币
-	user, err := services.UserService.CreateUser("testuser", "test@example.com", "password123")
+// TestStockService_CreateStock 测试创建股票
+func (suite *ServicesTestSuite) TestStockService_CreateStock() {
+	// 先创建用户
+	user, err := services.UserService.CreateUser("Test User", "testuser", "test@example.com", "password123")
 	suite.Require().NoError(err)
 
-	_, err = services.TokenService.CreateToken(user.ID, "TEST", "Test Token", 1000000.0, "A test token")
+	// 创建股票
+	stock, err := services.StockService.CreateStock(user.ID, "TEST", "Test Stock", 1000000.0, "A test stock")
+
+	assert.NoError(suite.T(), err)
+	assert.NotNil(suite.T(), stock)
+	assert.Equal(suite.T(), user.ID, stock.UserID)
+	assert.Equal(suite.T(), "TEST", stock.Symbol)
+	assert.Equal(suite.T(), "Test Stock", stock.Name)
+	assert.Equal(suite.T(), 1000000.0, stock.Supply) // 使用Supply而不是TotalSupply
+	assert.Equal(suite.T(), 1.0, stock.Price)        // 使用Price而不是CurrentPrice
+	assert.NotNil(suite.T(), stock.Description)
+	assert.Equal(suite.T(), "A test stock", *stock.Description)
+}
+
+// TestHoldingService_CreateHolding 测试创建持仓
+func (suite *ServicesTestSuite) TestHoldingService_CreateHolding() {
+	// 先创建用户和股票
+	user, err := services.UserService.CreateUser("Test User", "testuser", "test@example.com", "password123")
 	suite.Require().NoError(err)
 
-	// 检查存在的代币符号
-	exists := services.TokenService.IsTokenSymbolExists("TEST")
+	stock, err := services.StockService.CreateStock(user.ID, "TEST", "Test Stock", 1000000.0, "A test stock")
+	suite.Require().NoError(err)
+
+	// 创建持仓
+	holding, err := services.HoldingService.CreateHolding(user.ID, stock.ID, 100.0, 10.0)
+
+	assert.NoError(suite.T(), err)
+	assert.NotNil(suite.T(), holding)
+	assert.Equal(suite.T(), user.ID, holding.UserID)
+	assert.Equal(suite.T(), stock.ID, holding.StockID)
+	assert.Equal(suite.T(), 100.0, holding.Quantity)
+	// 移除AveragePrice字段检查，因为当前模型中没有这个字段
+	// assert.Equal(suite.T(), 10.0, holding.AveragePrice)
+}
+
+// TestStockService_IsSymbolExists 测试检查股票符号是否存在
+func (suite *ServicesTestSuite) TestStockService_IsSymbolExists() {
+	// 先创建用户和股票
+	user, err := services.UserService.CreateUser("Test User", "testuser", "test@example.com", "password123")
+	suite.Require().NoError(err)
+
+	_, err = services.StockService.CreateStock(user.ID, "TEST", "Test Stock", 1000000.0, "A test stock")
+	suite.Require().NoError(err)
+
+	// 检查存在的股票符号
+	exists := services.StockService.IsSymbolExists("TEST")
 	assert.True(suite.T(), exists)
 
-	// 检查不存在的代币符号
-	exists = services.TokenService.IsTokenSymbolExists("NONEXISTENT")
+	// 检查不存在的股票符号
+	exists = services.StockService.IsSymbolExists("NONEXISTENT")
 	assert.False(suite.T(), exists)
 }
 
-// TestTokenService_GetTokenBySymbol 测试根据符号获取代币
-func (suite *ServicesTestSuite) TestTokenService_GetTokenBySymbol() {
-	// 先创建用户和代币
-	user, err := services.UserService.CreateUser("testuser", "test@example.com", "password123")
+// TestStockService_GetStockBySymbol 测试根据符号获取股票
+func (suite *ServicesTestSuite) TestStockService_GetStockBySymbol() {
+	// 先创建用户和股票
+	user, err := services.UserService.CreateUser("Test User", "testuser", "test@example.com", "password123")
 	suite.Require().NoError(err)
 
-	createdToken, err := services.TokenService.CreateToken(user.ID, "TEST", "Test Token", 1000000.0, "A test token")
+	createdStock, err := services.StockService.CreateStock(user.ID, "TEST", "Test Stock", 1000000.0, "A test stock")
 	suite.Require().NoError(err)
 
-	// 获取代币
-	token, err := services.TokenService.GetTokenBySymbol("TEST")
+	// 获取股票
+	stock, err := services.StockService.GetStockBySymbol("TEST")
 	assert.NoError(suite.T(), err)
-	assert.Equal(suite.T(), createdToken.ID, token.ID)
-	assert.Equal(suite.T(), createdToken.TokenSymbol, token.TokenSymbol)
+	assert.Equal(suite.T(), createdStock.ID, stock.ID)
+	assert.Equal(suite.T(), createdStock.Symbol, stock.Symbol)
 
-	// 获取不存在的代币
-	_, err = services.TokenService.GetTokenBySymbol("NONEXISTENT")
+	// 获取不存在的股票
+	_, err = services.StockService.GetStockBySymbol("NONEXISTENT")
 	assert.Error(suite.T(), err)
 }
 

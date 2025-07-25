@@ -37,7 +37,7 @@ func (suite *ControllersTestSuite) SetupSuite() {
 	database.DB = db
 	suite.db = db
 
-	err = db.AutoMigrate(&models.User{}, &models.UserToken{}, &models.UserHolding{}, &models.PriceHistory{}, &models.GiftRecord{})
+	err = db.AutoMigrate(&models.User{}, &models.Post{}, &models.Stock{}, &models.UserHolding{}, &models.Trade{}, &models.ChartData{}, &models.GiftRecord{})
 	suite.Require().NoError(err)
 
 	services.InitServices()
@@ -53,8 +53,11 @@ func (suite *ControllersTestSuite) TearDownSuite() {
 // SetupTest 每个测试前的准备
 func (suite *ControllersTestSuite) SetupTest() {
 	suite.db.Exec("DELETE FROM users")
-	suite.db.Exec("DELETE FROM user_tokens")
+	suite.db.Exec("DELETE FROM posts")
+	suite.db.Exec("DELETE FROM stocks")
 	suite.db.Exec("DELETE FROM user_holdings")
+	suite.db.Exec("DELETE FROM trades")
+	suite.db.Exec("DELETE FROM chart_data")
 }
 
 // ==================== 认证测试 ====================
@@ -62,6 +65,7 @@ func (suite *ControllersTestSuite) SetupTest() {
 // TestRegister_Success 测试成功注册
 func (suite *ControllersTestSuite) TestRegister_Success() {
 	reqBody := controllers.RegisterRequest{
+		Name:     "Test User",
 		Username: "testuser",
 		Email:    "test@example.com",
 		Password: "password123",
@@ -80,6 +84,7 @@ func (suite *ControllersTestSuite) TestRegister_Success() {
 	err := json.Unmarshal(w.Body.Bytes(), &response)
 	assert.NoError(suite.T(), err)
 	assert.NotEmpty(suite.T(), response.Token)
+	assert.Equal(suite.T(), "Test User", response.User.Name)
 	assert.Equal(suite.T(), "testuser", response.User.Username)
 	assert.Equal(suite.T(), "test@example.com", response.User.Email)
 	assert.Empty(suite.T(), response.User.PasswordHash)
@@ -88,6 +93,7 @@ func (suite *ControllersTestSuite) TestRegister_Success() {
 // TestRegister_DuplicateUsername 测试重复用户名注册
 func (suite *ControllersTestSuite) TestRegister_DuplicateUsername() {
 	user := &models.User{
+		Name:         "Existing User",
 		Username:     "testuser",
 		Email:        "existing@example.com",
 		PasswordHash: "hashedpassword",
@@ -95,6 +101,7 @@ func (suite *ControllersTestSuite) TestRegister_DuplicateUsername() {
 	suite.db.Create(user)
 
 	reqBody := controllers.RegisterRequest{
+		Name:     "New User",
 		Username: "testuser",
 		Email:    "new@example.com",
 		Password: "password123",
@@ -116,7 +123,7 @@ func (suite *ControllersTestSuite) TestRegister_DuplicateUsername() {
 
 // TestLogin_Success 测试成功登录
 func (suite *ControllersTestSuite) TestLogin_Success() {
-	user, err := services.UserService.CreateUser("testuser", "test@example.com", "password123")
+	user, err := services.UserService.CreateUser("Test User", "testuser", "test@example.com", "password123")
 	suite.Require().NoError(err)
 
 	reqBody := controllers.LoginRequest{
@@ -154,7 +161,7 @@ func (suite *ControllersTestSuite) createAuthenticatedRequest(method, url string
 
 // TestGetUserProfile_Success 测试获取用户资料成功
 func (suite *ControllersTestSuite) TestGetUserProfile_Success() {
-	user, err := services.UserService.CreateUser("testuser", "test@example.com", "password123")
+	user, err := services.UserService.CreateUser("Test User", "testuser", "test@example.com", "password123")
 	suite.Require().NoError(err)
 
 	req := suite.createAuthenticatedRequest("GET", "/api/v1/user/profile", nil, user.ID.String())
@@ -169,16 +176,18 @@ func (suite *ControllersTestSuite) TestGetUserProfile_Success() {
 	assert.NoError(suite.T(), err)
 
 	userResp := response["user"].(map[string]interface{})
+	assert.Equal(suite.T(), "Test User", userResp["name"])
 	assert.Equal(suite.T(), "testuser", userResp["username"])
 	assert.Equal(suite.T(), "test@example.com", userResp["email"])
 }
 
 // TestUpdateUserProfile_Success 测试更新用户资料成功
 func (suite *ControllersTestSuite) TestUpdateUserProfile_Success() {
-	user, err := services.UserService.CreateUser("testuser", "test@example.com", "password123")
+	user, err := services.UserService.CreateUser("Test User", "testuser", "test@example.com", "password123")
 	suite.Require().NoError(err)
 
 	reqBody := controllers.UpdateProfileRequest{
+		Name:  "Updated User",
 		Email: "newemail@example.com",
 	}
 
@@ -195,91 +204,60 @@ func (suite *ControllersTestSuite) TestUpdateUserProfile_Success() {
 	assert.NoError(suite.T(), err)
 
 	userResp := response["user"].(map[string]interface{})
+	assert.Equal(suite.T(), "Updated User", userResp["name"])
 	assert.Equal(suite.T(), "newemail@example.com", userResp["email"])
 }
 
-// ==================== 代币测试 ====================
+// ==================== 帖子测试 ====================
 
-// TestCreateToken_Success 测试创建代币成功
-func (suite *ControllersTestSuite) TestCreateToken_Success() {
-	user, err := services.UserService.CreateUser("testuser", "test@example.com", "password123")
+// TestCreatePost_Success 测试创建帖子成功
+func (suite *ControllersTestSuite) TestCreatePost_Success() {
+	user, err := services.UserService.CreateUser("Test User", "testuser", "test@example.com", "password123")
 	suite.Require().NoError(err)
 
-	reqBody := controllers.CreateTokenRequest{
-		TokenSymbol: "TEST",
-		TokenName:   "Test Token",
-		TotalSupply: 1000000.0,
-		Description: "A test token",
+	reqBody := controllers.CreatePostRequest{
+		Content: "This is a test post",
 	}
 
 	jsonBody, _ := json.Marshal(reqBody)
-	req := suite.createAuthenticatedRequest("POST", "/api/v1/tokens", jsonBody, user.ID.String())
+	req := suite.createAuthenticatedRequest("POST", "/api/v1/posts", jsonBody, user.ID.String())
 
 	w := httptest.NewRecorder()
 	suite.router.ServeHTTP(w, req)
 
 	assert.Equal(suite.T(), http.StatusCreated, w.Code)
 
-	var response map[string]interface{}
+	var response controllers.CreatePostResponse
 	err = json.Unmarshal(w.Body.Bytes(), &response)
 	assert.NoError(suite.T(), err)
-
-	token := response["token"].(map[string]interface{})
-	assert.Equal(suite.T(), "TEST", token["token_symbol"])
-	assert.Equal(suite.T(), "Test Token", token["token_name"])
-	assert.Equal(suite.T(), 1000000.0, token["total_supply"])
+	assert.NotEmpty(suite.T(), response.ID)
+	assert.Equal(suite.T(), "This is a test post", response.Content)
+	assert.Equal(suite.T(), "Test User", response.User.Name)
 }
 
-// TestGetAllTokens_Success 测试获取所有代币成功
-func (suite *ControllersTestSuite) TestGetAllTokens_Success() {
-	user, err := services.UserService.CreateUser("testuser", "test@example.com", "password123")
+// TestGetTimeline_Success 测试获取时间线成功
+func (suite *ControllersTestSuite) TestGetTimeline_Success() {
+	user, err := services.UserService.CreateUser("Test User", "testuser", "test@example.com", "password123")
 	suite.Require().NoError(err)
 
-	_, err = services.TokenService.CreateToken(user.ID, "TEST1", "Test Token 1", 1000000.0, "Test token 1")
-	suite.Require().NoError(err)
-	_, err = services.TokenService.CreateToken(user.ID, "TEST2", "Test Token 2", 2000000.0, "Test token 2")
+	// 创建测试帖子
+	_, err = services.PostService.CreatePost(user.ID, "Test post content")
 	suite.Require().NoError(err)
 
-	req, _ := http.NewRequest("GET", "/api/v1/tokens", nil)
-
+	req, _ := http.NewRequest("GET", "/api/v1/posts/timeline", nil)
 	w := httptest.NewRecorder()
 	suite.router.ServeHTTP(w, req)
 
 	assert.Equal(suite.T(), http.StatusOK, w.Code)
 
-	var response map[string]interface{}
+	var response controllers.TimelineResponse
 	err = json.Unmarshal(w.Body.Bytes(), &response)
 	assert.NoError(suite.T(), err)
-
-	tokens := response["tokens"].([]interface{})
-	assert.Len(suite.T(), tokens, 2)
+	assert.Len(suite.T(), response.Posts, 1)
+	assert.Equal(suite.T(), "Test post content", response.Posts[0].Content)
 }
 
-// TestGetTokenBySymbol_Success 测试根据符号获取代币成功
-func (suite *ControllersTestSuite) TestGetTokenBySymbol_Success() {
-	user, err := services.UserService.CreateUser("testuser", "test@example.com", "password123")
-	suite.Require().NoError(err)
-
-	createdToken, err := services.TokenService.CreateToken(user.ID, "TEST", "Test Token", 1000000.0, "A test token")
-	suite.Require().NoError(err)
-
-	req, _ := http.NewRequest("GET", "/api/v1/tokens/TEST", nil)
-
-	w := httptest.NewRecorder()
-	suite.router.ServeHTTP(w, req)
-
-	assert.Equal(suite.T(), http.StatusOK, w.Code)
-
-	var response map[string]interface{}
-	err = json.Unmarshal(w.Body.Bytes(), &response)
-	assert.NoError(suite.T(), err)
-
-	token := response["token"].(map[string]interface{})
-	assert.Equal(suite.T(), createdToken.TokenSymbol, token["token_symbol"])
-	assert.Equal(suite.T(), createdToken.TokenName, token["token_name"])
-}
-
-// TestControllersTestSuite 运行控制器测试套件
+// 运行测试套件
 func TestControllersTestSuite(t *testing.T) {
 	suite.Run(t, new(ControllersTestSuite))
 }
