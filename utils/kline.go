@@ -15,21 +15,21 @@ type KlineData struct {
 	Volume    float64 `json:"volume"`
 }
 
-// ConvertToKlineData 将PriceHistory转换为前端K线数据格式
-func ConvertToKlineData(priceHistory []models.PriceHistory) []KlineData {
+// ConvertToKlineData 将ChartData转换为前端K线数据格式
+func ConvertToKlineData(chartData []models.ChartData) []KlineData {
 	var klineData []KlineData
-	
-	for _, ph := range priceHistory {
+
+	for _, cd := range chartData {
 		klineData = append(klineData, KlineData{
-			Timestamp: ph.Timestamp.Unix() * 1000, // 转换为毫秒时间戳
-			Open:      ph.OpenPrice,
-			High:      ph.HighPrice,
-			Low:       ph.LowPrice,
-			Close:     ph.ClosePrice,
-			Volume:    ph.Volume,
+			Timestamp: cd.Time * 1000, // 修正：使用 Time 字段而不是 Timestamp
+			Open:      cd.OpenPrice,
+			High:      cd.HighPrice,
+			Low:       cd.LowPrice,
+			Close:     cd.ClosePrice,
+			Volume:    cd.Volume,
 		})
 	}
-	
+
 	return klineData
 }
 
