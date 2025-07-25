@@ -31,7 +31,9 @@ export default function Landing() {
             <div className="relative z-10 flex flex-row items-center justify-evenly h-full">
                 {/* 左侧 */}
                 <div className="flex flex-col items-start justify-center w-1/2 gap-4">
-                    <h1 className="text-6xl font-bold text-white">Growth is Your First Equity</h1>
+                    <h1 className="text-6xl font-bold text-white">
+                      Your Growth is also a Stock
+                    </h1>
                     <h2 className="text-2xl text-gray-300">Every step forward is already worth holding.</h2>
                     <div className="flex flex-row items-center justify-center">
                         <TargetCursor 
@@ -40,11 +42,11 @@ export default function Landing() {
                         />
                         
                         <button onClick={handleCreate} className="cursor-target px-6 py-12 bg-white text-black text-2xl font-semibold rounded-md my-8 mr-4 hover:bg-opacity-90 transition-all shadow-lg transform hover:scale-105">
-                            Turn My Idea into an Asset
+                            Create my YOLO stock
                         </button>
 
                         <button onClick={handleExplore} className="cursor-target px-6 py-6 bg-transparent border-2 border-white text-white font-semibold rounded-md my-8 hover:bg-red-500 hover:bg-opacity-10 transition-all shadow-lg transform hover:scale-105">
-                            Browse High-Conviction Ideas
+                            Explore the Market
                         </button>
                     </div>
                 </div>

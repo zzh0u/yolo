@@ -23,7 +23,7 @@ export default function Navbar() {
         <div className="flex w-full flex-row items-center justify-between px-4">
         <div className="flex items-center justify-center">
             <Link href="/" className="text-xl font-bold text-white flex items-center gap-2">
-              Triody
+              YOLO
             </Link>
         </div>
         
