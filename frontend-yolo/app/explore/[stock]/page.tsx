@@ -1,6 +1,6 @@
 "use client";
 import { useParams } from "next/navigation";
-import ProductHeader from "@/components/detail/product-header";
+import StockHeader from "@/components/detail/product-header";
 import StatsBar from "@/components/detail/stats-bar";
 import SwapPanel from "@/components/detail/swap-panel";
 import TradingViewChart from "@/components/detail/trading-view-chart";
@@ -13,14 +13,14 @@ import Link from "next/link";
 import { Home, Compass, PlusCircle, User } from "lucide-react";
 
 export default function ProductPage() {
-    const { product } = useParams();
+    const { stock } = useParams();
     // Static data based on the new screenshot
     const staticData = {
-        name: "DIAToken",
-        symbol: "DIA",
-        price: "0.8694",
+        name: "Cohol",
+        symbol: "CHC",
+        price: "725.528",
         change: "+72%",
-        chain: "ETHEREUM",
+        chain: "YOLO",
         marketCap: "$189.3M",
         volume: "$1.6M",
         priceChange: "+97.1%",
@@ -35,7 +35,7 @@ export default function ProductPage() {
             <div className="flex-grow flex flex-col p-4 md:p-6 lg:p-8">
                 <div className="flex flex-col xl:flex-row flex-grow gap-8">
                     <main className="flex-grow flex flex-col gap-6">
-                        <ProductHeader
+                        <StockHeader
                             name={staticData.name}
                             symbol={staticData.symbol}
                             price={staticData.price}

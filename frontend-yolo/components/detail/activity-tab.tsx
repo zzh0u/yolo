@@ -2,26 +2,56 @@ import React from 'react';
 
 const activities = [
   {
-    date: 'July 21, 2024',
-    title: 'DIA Oracle Gasdrop on Arbitrum',
-    description: 'The DIA Oracle Gasdrop on Arbitrum is a program designed to reduce the gas costs for dApps on Arbitrum by providing gas-optimized price oracles.',
+    date: '2023年1月15日',
+    title: '一个疯狂的想法诞生',
+    description: '脑子里冒出一个疯狂的 app 想法。有点像为 Y 做的 X，但是加入了 Z。感觉这事有戏。#buildinpublic',
   },
   {
-    date: 'July 15, 2024',
-    title: 'Partnership with ZetaChain Announced',
-    description: 'DIA has announced a new partnership with ZetaChain, an L1 blockchain with built-in chain abstraction, to provide transparent and reliable price oracles.',
+    date: '2023年3月2日',
+    title: '不眠之夜，构建 MVP',
+    description: '不眠之夜，咖啡为伴。MVP 终于初具雏形。虽然简陋，bug 不少，但它活过来了！#indiedev #startup',
   },
   {
-    date: 'June 28, 2024',
-    title: 'New Randomness Oracle Deployed',
-    description: 'DIA has deployed a new randomness oracle on multiple chains, providing a secure and verifiable source of randomness for on-chain applications.',
+    date: '2023年4月20日',
+    title: '产品上线！',
+    description: '终于上线了！经过几个月的奋战，我的小项目终于面世了。既紧张又兴奋。快来看看吧！#productlaunch',
   },
   {
-    date: 'June 10, 2024',
-    title: 'Integration with Mode Network',
-    description: 'DIA has integrated its oracle suite with Mode Network, a modular L2 designed for hyper-growth, bringing reliable price feeds to its ecosystem.',
+    date: '2023年4月22日',
+    title: '第一个付费用户！',
+    description: '一个我完全不认识的人注册了。而且还付费了！这不是演习！你永远不会忘记第一个客户。#smallwins',
   },
-];
+  {
+    date: '2023年6月5日',
+    title: '用户突破1000！',
+    description: '第 1000 个用户刚刚加入！社区在成长，反馈也非常棒。看起来路子走对了。#growth',
+  },
+  {
+    date: '2023年7月1日',
+    title: '艰难的决定：砍掉功能',
+    description: '今天砍掉了一个我很喜欢的功能。艰难的决定，但数据不会说谎。最重要的是倾听用户的声音。#leanstartup',
+  },
+  {
+    date: '2023年8月10日',
+    title: '我们开始招人了！',
+    description: '我们开始招人了！寻找一位创始工程师加入我们的使命。这不再是一个小团队，而是一艘火箭。请私信我。#hiring #startupjobs',
+  },
+  {
+    date: '2023年9月15日',
+    title: '来自 VC 的邮件',
+    description: '收件箱里开始出现一些有趣的邮件，发件地址里带着‘.vc’。事情变得真实起来了。#venturecapital',
+  },
+  {
+    date: '2023年11月20日',
+    title: '融资路演',
+    description: '向风投路演简直是份全职工作。你会听到99次‘不’，但你只需要一个‘是’。过程很磨人。#fundraising',
+  },
+  {
+    date: '2024年1月8日',
+    title: '完成种子轮融资！',
+    description: '激动地宣布，我们完成了由 Awesome Ventures 领投的200万美元种子轮融资！这属于我们的团队、用户和所有从第一天就相信我们的人。现在，继续埋头苦干。#funding #startup',
+  },
+].reverse();
 
 const ActivityTab = () => {
   return (

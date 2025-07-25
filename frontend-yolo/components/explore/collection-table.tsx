@@ -143,7 +143,7 @@ import {
               <TableRow 
                 key={index} 
                 className="border-b border-gray-800 hover:bg-gray-800/50 align-middle cursor-pointer"
-                onClick={() => router.push(`/discover/${collection.name}`)}
+                onClick={() => router.push(`/explore/${collection.name}`)}
               >
                 <TableCell>
                   <div className="flex items-center gap-4">

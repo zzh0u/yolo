@@ -3,6 +3,7 @@ import CreatePost from '@/components/explore/create-post';
 import { MoreHorizontal, CheckCircle, TrendingUp, TrendingDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { useRouter } from 'next/navigation';
 
 const threads = [
   {
@@ -156,6 +157,14 @@ experimented with super long (60+ seconds) this time for tt. only 130k views so 
 ];
 
 const Timeline = () => {
+  const router = useRouter();
+  const handleBuy = (stock: string) => {
+    router.push(`/explore/${stock}`)
+  }
+  const handleSell = (stock: string) => {
+    router.push(`/explore/${stock}`)
+  }
+
   return (
 
     <div className="w-full max-w-2xl mx-auto text-white h-screen flex flex-col px-12 py-12">
@@ -184,11 +193,11 @@ const Timeline = () => {
 
                   <p className='whitespace-pre-wrap mt-2'>{thread.content}</p>
                    <div className="flex items-center gap-2 mt-4 w-full">
-                        <Button variant="ghost" className="w-1/2 bg-transparent text-green-400 hover:bg-green-900/50 hover:text-green-300 flex items-center gap-2 group border-1 border-green-200">
+                        <Button variant="ghost" className="w-1/2 bg-transparent text-green-400 hover:bg-green-900/50 hover:text-green-300 flex items-center gap-2 group border-1 border-green-200" onClick={() => handleBuy(thread.user.name)}>
                             <TrendingUp className="h-4 w-4 transform transition-transform duration-200 group-hover:scale-110" />
                             <span>Buy</span>
                         </Button>
-                        <Button variant="ghost" className="w-1/2 bg-transparent text-red-400 hover:bg-red-900/50 hover:text-red-300 flex items-center gap-2 group border-1 border-red-200">
+                        <Button variant="ghost" className="w-1/2 bg-transparent text-red-400 hover:bg-red-900/50 hover:text-red-300 flex items-center gap-2 group border-1 border-red-200" onClick={() => handleSell(thread.user.name)}>
                             <TrendingDown className="h-4 w-4 transform transition-transform duration-200 group-hover:scale-110" />
                             <span>Sell</span>
                         </Button>
