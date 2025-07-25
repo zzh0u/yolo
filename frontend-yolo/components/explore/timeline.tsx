@@ -13,7 +13,7 @@ const threads = [
       handle: '@SidesshMore',
       avatar: '/img/sam.png',
       verified: true,
-      yoloStockValue: 12345,
+      yoloStockValue: 12345, 
     },
     content: "A year from now, you'll wish you had started today.",
     timestamp: '38m',
