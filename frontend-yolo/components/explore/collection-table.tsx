@@ -57,12 +57,12 @@ import {
   
   function formatCurrency(value: number) {
     if (value >= 1000000) {
-      return `$${(value / 1000000).toFixed(1)}M`;
+      return `${(value / 1000000).toFixed(1)}M YOLO`;
     }
     if (value >= 1000) {
-      return `$${(value / 1000).toFixed(1)}K`;
+      return `${(value / 1000).toFixed(1)}K YOLO`;
     }
-    return `$${value.toFixed(2)}`;
+    return `${value.toFixed(2)} YOLO`;
   }
   
   export function CollectionTable({ stocks = [] }: CollectionTableProps) {

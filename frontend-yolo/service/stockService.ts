@@ -431,4 +431,219 @@ export class StockService {
       return [];
     }
   }
+
+  // 获取股票的交易记录
+  static async getStockTransactions(stockId: string, limit: number = 100): Promise<any[]> {
+    try {
+      this.checkSupabaseConfig();
+      
+      const { data, error } = await supabase
+        .from('transactions')
+        .select('*')
+        .eq('stock_id', stockId)
+        .order('created_at', { ascending: false })
+        .limit(limit);
+
+      if (error && !error.message.includes('relation "transactions" does not exist')) {
+        throw error;
+      }
+
+      return data || [];
+    } catch (error: any) {
+      if (!error.message?.includes('relation "transactions" does not exist')) {
+        console.error('Error fetching stock transactions:', error);
+      }
+      return [];
+    }
+  }
+
+  // 获取所有交易记录（用于计算市场数据）
+  static async getAllTransactions(limit: number = 1000): Promise<any[]> {
+    try {
+      this.checkSupabaseConfig();
+      
+      const { data, error } = await supabase
+        .from('transactions')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(limit);
+
+      if (error && !error.message.includes('relation "transactions" does not exist')) {
+        throw error;
+      }
+
+      return data || [];
+    } catch (error: any) {
+      if (!error.message?.includes('relation "transactions" does not exist')) {
+        console.error('Error fetching all transactions:', error);
+      }
+      return [];
+    }
+  }
+
+  // 计算股票的24小时交易量（YOLO）
+  static async calculateDailyVolume(stockId: string): Promise<number> {
+    try {
+      const oneDayAgo = new Date();
+      oneDayAgo.setDate(oneDayAgo.getDate() - 1);
+
+      const { data, error } = await supabase
+        .from('transactions')
+        .select('total_amount')
+        .eq('stock_id', stockId)
+        .gte('created_at', oneDayAgo.toISOString());
+
+      if (error && !error.message.includes('relation "transactions" does not exist')) {
+        throw error;
+      }
+
+      if (!data || data.length === 0) {
+        return 0;
+      }
+
+      return data.reduce((sum, transaction) => sum + parseFloat(transaction.total_amount), 0);
+    } catch (error: any) {
+      if (!error.message?.includes('relation "transactions" does not exist')) {
+        console.error('Error calculating daily volume:', error);
+      }
+      return 0;
+    }
+  }
+
+  // 计算股票的24小时价格变化
+  static async calculateDailyChange(stockId: string, currentPrice: number): Promise<number> {
+    try {
+      const oneDayAgo = new Date();
+      oneDayAgo.setDate(oneDayAgo.getDate() - 1);
+
+      const { data, error } = await supabase
+        .from('transactions')
+        .select('price_per_share, created_at')
+        .eq('stock_id', stockId)
+        .lte('created_at', oneDayAgo.toISOString())
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      if (error && !error.message.includes('relation "transactions" does not exist')) {
+        throw error;
+      }
+
+      if (!data || data.length === 0) {
+        return 0; // 没有历史数据，变化为0
+      }
+
+      const yesterdayPrice = parseFloat(data[0].price_per_share);
+      if (yesterdayPrice === 0) return 0;
+
+      return ((currentPrice - yesterdayPrice) / yesterdayPrice) * 100;
+    } catch (error: any) {
+      if (!error.message?.includes('relation "transactions" does not exist')) {
+        console.error('Error calculating daily change:', error);
+      }
+      return 0;
+    }
+  }
+
+  // 获取股票的历史价格数据（用于图表）
+  static async getStockPriceHistory(stockId: string, days: number = 7): Promise<{ value: number; timestamp: string }[]> {
+    try {
+      const startDate = new Date();
+      startDate.setDate(startDate.getDate() - days);
+
+      const { data, error } = await supabase
+        .from('transactions')
+        .select('price_per_share, created_at')
+        .eq('stock_id', stockId)
+        .gte('created_at', startDate.toISOString())
+        .order('created_at', { ascending: true });
+
+      if (error && !error.message.includes('relation "transactions" does not exist')) {
+        throw error;
+      }
+
+      if (!data || data.length === 0) {
+        return []; // 没有历史数据
+      }
+
+      return data.map(transaction => ({
+        value: parseFloat(transaction.price_per_share),
+        timestamp: transaction.created_at
+      }));
+    } catch (error: any) {
+      if (!error.message?.includes('relation "transactions" does not exist')) {
+        console.error('Error fetching price history:', error);
+      }
+      return [];
+    }
+  }
+
+  // 获取股票的实际持有人数
+  static async getStockOwnersCount(stockId: string): Promise<number> {
+    try {
+      this.checkSupabaseConfig();
+      
+      const { data, error } = await supabase
+        .from('user_holdings')
+        .select('user_id')
+        .eq('stock_id', stockId)
+        .gt('shares', 0);
+
+      if (error && !error.message.includes('relation "user_holdings" does not exist')) {
+        throw error;
+      }
+
+      return data ? data.length : 1; // 至少有创建者
+    } catch (error: any) {
+      if (!error.message?.includes('relation "user_holdings" does not exist')) {
+        console.error('Error fetching owners count:', error);
+      }
+      return 1; // 默认至少有创建者
+    }
+  }
+
+  // 获取增强的股票数据（包含计算的市场数据）
+  static async getEnhancedStockData(stocks: Stock[]): Promise<any[]> {
+    const enhancedStocks = await Promise.all(
+      stocks.map(async (stock) => {
+        const [dailyVolume, dailyChange, priceHistory, ownersCount] = await Promise.all([
+          this.calculateDailyVolume(stock.id),
+          this.calculateDailyChange(stock.id, stock.price || 1),
+          this.getStockPriceHistory(stock.id),
+          this.getStockOwnersCount(stock.id)
+        ]);
+
+        const price = stock.price || 1;
+        const marketCap = price * stock.supply;
+
+        // 确定股票状态
+        const createdAt = new Date(stock.created_at);
+        const daysSinceCreation = Math.floor((Date.now() - createdAt.getTime()) / (1000 * 60 * 60 * 24));
+        let status: "idea" | "prototype" | "demo" | "fundraising";
+        
+        if (daysSinceCreation < 1) status = "idea";
+        else if (daysSinceCreation < 7 && price < 10) status = "prototype";
+        else if (daysSinceCreation < 30 && price < 50) status = "demo";
+        else status = "fundraising";
+
+        return {
+          id: stock.id,
+          name: stock.name,
+          symbol: stock.symbol,
+          image_url: stock.image_url,
+          price,
+          supply: stock.supply,
+          owners: Math.max(ownersCount, stock.owners || 1),
+          created_at: stock.created_at,
+          user_id: stock.user_id,
+          marketCap,
+          dailyChange,
+          dailyVolume,
+          status,
+          chartData: priceHistory.length > 0 ? priceHistory.map(p => ({ value: p.value })) : []
+        };
+      })
+    );
+
+    return enhancedStocks;
+  }
 }

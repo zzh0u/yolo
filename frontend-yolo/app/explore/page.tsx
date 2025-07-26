@@ -53,83 +53,27 @@ export default function DiscoverPage() {
   // 添加调试信息
   console.log('DiscoverPage - loading:', loading, 'user:', user)
 
-  // 生成模拟图表数据
-  const generateChartData = useCallback(() => {
-    return Array.from({ length: 7 }, () => ({ value: Math.random() * 100 }));
-  }, [])
-
-  // 计算股票状态（基于创建时间和价格）
-  const calculateStockStatus = useCallback((stock: Stock): "idea" | "prototype" | "demo" | "fundraising" => {
-    const createdAt = new Date(stock.created_at);
-    const daysSinceCreation = Math.floor((Date.now() - createdAt.getTime()) / (1000 * 60 * 60 * 24));
-    const price = stock.price || 1;
-    
-    if (daysSinceCreation < 1) return "idea";
-    if (daysSinceCreation < 7 && price < 10) return "prototype";
-    if (daysSinceCreation < 30 && price < 50) return "demo";
-    return "fundraising";
-  }, [])
-
-  // 计算日变化率（模拟数据，实际应该基于历史价格）
-  const calculateDailyChange = useCallback((stock: Stock): number => {
-    // 基于股票符号生成一致的模拟变化率
-    const seed = stock.symbol.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-    const random = (seed * 9301 + 49297) % 233280;
-    return ((random / 233280) - 0.5) * 40; // -20% 到 +20% 的变化
-  }, [])
-
-  // 计算日交易量（模拟数据，实际应该基于交易记录）
-  const calculateDailyVolume = useCallback((stock: Stock): number => {
-    const marketCap = (stock.price || 1) * stock.supply;
-    return marketCap * (0.01 + Math.random() * 0.1); // 市值的1-11%作为日交易量
-  }, [])
-
-  // 转换股票数据格式
-  const transformStockData = useCallback((stockList: Stock[]): StockData[] => {
-    return stockList.map(stock => {
-      const price = stock.price || 1;
-      const marketCap = price * stock.supply;
-      const dailyChange = calculateDailyChange(stock);
-      const dailyVolume = calculateDailyVolume(stock);
-      const status = calculateStockStatus(stock);
-      
-      return {
-        id: stock.id,
-        name: stock.name,
-        symbol: stock.symbol,
-        image_url: stock.image_url,
-        price,
-        supply: stock.supply,
-        owners: stock.owners || 1,
-        created_at: stock.created_at,
-        user_id: stock.user_id,
-        marketCap,
-        dailyChange,
-        dailyVolume,
-        status,
-        chartData: generateChartData()
-      };
-    });
-  }, [calculateDailyChange, calculateDailyVolume, calculateStockStatus, generateChartData])
-
-  // 获取所有股票数据
+  // 获取所有股票数据并计算真实市场数据
   const fetchStocks = useCallback(async () => {
     try {
       setIsLoadingData(true);
       setError(null);
       
+      // 获取基础股票数据
       const stockList = await StockService.getAllStocks();
-      const transformedStocks = transformStockData(stockList);
       
-      setStocks(transformedStocks);
-      setFilteredStocks(transformedStocks);
+      // 获取增强的股票数据（包含真实的市场数据）
+      const enhancedStocks = await StockService.getEnhancedStockData(stockList);
+      
+      setStocks(enhancedStocks);
+      setFilteredStocks(enhancedStocks);
     } catch (error) {
       console.error('获取股票数据失败:', error);
       setError('获取股票数据失败，请稍后重试');
     } finally {
       setIsLoadingData(false);
     }
-  }, [transformStockData])
+  }, [])
 
   // 获取用户余额
   const fetchUserBalance = useCallback(async () => {
