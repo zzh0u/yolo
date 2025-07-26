@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS stock (
   symbol VARCHAR(20) UNIQUE NOT NULL,
   image_url TEXT,
   owners INTEGER DEFAULT 1,
-  supply INTEGER NOT NULL DEFAULT 1000,
+  supply DECIMAL(20,8) NOT NULL DEFAULT 1000.0,
   price DECIMAL(20,8) DEFAULT 0,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -28,7 +28,7 @@ CREATE TABLE IF NOT EXISTS user_holdings (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   stock_id UUID NOT NULL REFERENCES stock(id) ON DELETE CASCADE,
-  shares INTEGER NOT NULL DEFAULT 0,
+  shares DECIMAL(20,8) NOT NULL DEFAULT 0,
   average_price DECIMAL(20,8) NOT NULL DEFAULT 0,
   total_investment DECIMAL(20,8) NOT NULL DEFAULT 0,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
@@ -41,8 +41,8 @@ CREATE TABLE IF NOT EXISTS liquidity_pools (
   stock_id UUID UNIQUE NOT NULL REFERENCES stock(id) ON DELETE CASCADE,
   creator_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   yolo_reserve DECIMAL(20,8) NOT NULL DEFAULT 0,
-  stock_reserve INTEGER NOT NULL DEFAULT 0,
-  total_supply INTEGER NOT NULL DEFAULT 0,
+  stock_reserve DECIMAL(20,8) NOT NULL DEFAULT 0,
+  total_supply DECIMAL(20,8) NOT NULL DEFAULT 0,
   k_constant DECIMAL(40,16) NOT NULL DEFAULT 0, -- x * y = k
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -53,7 +53,7 @@ CREATE TABLE IF NOT EXISTS transactions (
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   stock_id UUID NOT NULL REFERENCES stock(id) ON DELETE CASCADE,
   transaction_type VARCHAR(20) NOT NULL CHECK (transaction_type IN ('buy', 'sell', 'create')),
-  shares INTEGER NOT NULL,
+  shares DECIMAL(20,8) NOT NULL,
   price_per_share DECIMAL(20,8) NOT NULL,
   total_amount DECIMAL(20,8) NOT NULL,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()

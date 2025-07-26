@@ -114,7 +114,7 @@ export class StockService {
 
       // 扣除用户YOLO币（只需支付35%股份对应的金额）
       try {
-        const userShares = Math.floor(stockData.supply * 0.35); // 35% 的股份
+        const userShares = stockData.supply * 0.35; // 35% 的股份，支持小数
         const actualInvestment = stockData.price * userShares; // 用户实际需要支付的金额
         await this.deductUserBalance(userId, actualInvestment);
       } catch (balanceError) {
@@ -131,7 +131,7 @@ export class StockService {
   // 创建流动性池（平台提供65%的流动性）
   private static async createLiquidityPool(stockId: string, price: number, totalSupply: number, userId: string) {
     // 65% 的股份进入流动性池，35% 归创建者
-    const poolSupply = Math.floor(totalSupply * 0.65); // 65% 进入流动性池
+    const poolSupply = totalSupply * 0.65; // 65% 进入流动性池，支持小数
     const poolYoloReserve = price * poolSupply; // 平台提供的YOLO币储备
     const kConstant = poolYoloReserve * poolSupply; // AMM 恒定乘积 k = x * y
     
@@ -163,7 +163,7 @@ export class StockService {
   // 创建用户持股记录
   private static async createUserHolding(stockId: string, userId: string, totalSupply: number, price: number) {
     // 用户自动获得所创建股票的 35% 持股
-    const userShares = Math.floor(totalSupply * 0.35); // 35% 的股份
+    const userShares = totalSupply * 0.35; // 35% 的股份，支持小数
     const userInvestment = price * userShares; // 用户实际投资金额
     
     try {
@@ -241,7 +241,7 @@ export class StockService {
   static async validateInvestment(userId: string, price: number, supply: number): Promise<{valid: boolean, message?: string}> {
     try {
       const userBalance = await this.getUserBalance(userId);
-      const userShares = Math.floor(supply * 0.35); // 35% 的股份
+      const userShares = supply * 0.35; // 35% 的股份，支持小数
       const requiredAmount = price * userShares; // 用户需要支付的金额
       
       if (requiredAmount > userBalance.balance) {
@@ -421,9 +421,9 @@ export class StockService {
       const userStocks = await this.getUserStocks(userId);
       return userStocks.map(stock => ({
         stock_id: stock.id,
-        shares: Math.floor(stock.supply * 0.35), // 35% 持股
+        shares: stock.supply * 0.35, // 35% 持股，支持小数
         average_price: stock.price || 1,
-        total_investment: (stock.price || 1) * Math.floor(stock.supply * 0.35),
+        total_investment: (stock.price || 1) * (stock.supply * 0.35),
         stock: stock
       }));
     } catch (error) {
@@ -645,5 +645,502 @@ export class StockService {
     );
 
     return enhancedStocks;
+  }
+
+  // 获取单个股票的增强数据（根据symbol）
+  static async getSingleStockEnhancedData(symbol: string): Promise<any | null> {
+    try {
+      // 首先根据symbol获取股票基础信息
+      const stock = await this.getStockBySymbol(symbol);
+      if (!stock) {
+        return null;
+      }
+
+      // 获取增强数据
+      const [dailyVolume, dailyChange, priceHistory, ownersCount] = await Promise.all([
+        this.calculateDailyVolume(stock.id),
+        this.calculateDailyChange(stock.id, stock.price || 1),
+        this.getStockPriceHistory(stock.id),
+        this.getStockOwnersCount(stock.id)
+      ]);
+
+      const price = stock.price || 1;
+      const marketCap = price * stock.supply;
+
+      // 确定股票状态
+      const createdAt = new Date(stock.created_at);
+      const daysSinceCreation = Math.floor((Date.now() - createdAt.getTime()) / (1000 * 60 * 60 * 24));
+      let status: "idea" | "prototype" | "demo" | "fundraising";
+      
+      if (daysSinceCreation < 1) status = "idea";
+      else if (daysSinceCreation < 7 && price < 10) status = "prototype";
+      else if (daysSinceCreation < 30 && price < 50) status = "demo";
+      else status = "fundraising";
+
+      return {
+        id: stock.id,
+        name: stock.name,
+        symbol: stock.symbol,
+        image_url: stock.image_url,
+        current_price: price,
+        supply: stock.supply,
+        owners: Math.max(ownersCount, stock.owners || 1),
+        created_at: stock.created_at,
+        user_id: stock.user_id,
+        market_cap: marketCap,
+        daily_change: dailyChange,
+        daily_volume: dailyVolume,
+        status,
+        chart_data: priceHistory.length > 0 ? priceHistory.map(p => ({ value: p.value })) : [],
+        holders_count: Math.max(ownersCount, stock.owners || 1)
+      };
+    } catch (error) {
+      console.error('Error in getSingleStockEnhancedData:', error);
+      return null;
+    }
+  }
+
+  // ==================== 交易相关方法 ====================
+
+  // 根据symbol获取股票信息
+  static async getStockBySymbol(symbol: string): Promise<Stock | null> {
+    try {
+      this.checkSupabaseConfig();
+      
+      const { data, error } = await supabase
+        .from('stock')
+        .select('*')
+        .eq('symbol', symbol.toUpperCase())
+        .single();
+
+      if (error) {
+        console.error('Error fetching stock by symbol:', error);
+        return null;
+      }
+
+      return data;
+    } catch (error) {
+      console.error('Error in getStockBySymbol:', error);
+      return null;
+    }
+  }
+
+  // 获取流动性池信息
+  static async getLiquidityPool(stockId: string): Promise<any | null> {
+    try {
+      this.checkSupabaseConfig();
+      
+      const { data, error } = await supabase
+        .from('liquidity_pools')
+        .select('*')
+        .eq('stock_id', stockId)
+        .single();
+
+      if (error && !error.message.includes('relation "liquidity_pools" does not exist')) {
+        console.error('Error fetching liquidity pool:', error);
+        return null;
+      }
+
+      return data;
+    } catch (error: any) {
+      if (!error.message?.includes('relation "liquidity_pools" does not exist')) {
+        console.error('Error in getLiquidityPool:', error);
+      }
+      return null;
+    }
+  }
+
+  // 计算AMM买入价格（用YOLO买股票）
+  static calculateBuyPrice(yoloReserve: number, stockReserve: number, yoloAmount: number): {
+    stockAmount: number;
+    pricePerStock: number;
+    priceImpact: number;
+  } {
+    if (yoloReserve <= 0 || stockReserve <= 0 || yoloAmount <= 0) {
+      return { stockAmount: 0, pricePerStock: 0, priceImpact: 0 };
+    }
+
+    // AMM恒定乘积公式: x * y = k
+    const k = yoloReserve * stockReserve;
+    const newYoloReserve = yoloReserve + yoloAmount;
+    const newStockReserve = k / newYoloReserve;
+    const stockAmount = stockReserve - newStockReserve;
+    
+    const pricePerStock = stockAmount > 0 ? yoloAmount / stockAmount : 0;
+    const currentPrice = yoloReserve / stockReserve;
+    const priceImpact = pricePerStock > 0 ? ((pricePerStock - currentPrice) / currentPrice) * 100 : 0;
+
+    return {
+      stockAmount: stockAmount, // 保持原始精度，不强制截断
+      pricePerStock,
+      priceImpact
+    };
+  }
+
+  // 计算AMM卖出价格（卖股票换YOLO）
+  static calculateSellPrice(yoloReserve: number, stockReserve: number, stockAmount: number): {
+    yoloAmount: number;
+    pricePerStock: number;
+    priceImpact: number;
+  } {
+    if (yoloReserve <= 0 || stockReserve <= 0 || stockAmount <= 0) {
+      return { yoloAmount: 0, pricePerStock: 0, priceImpact: 0 };
+    }
+
+    // AMM恒定乘积公式: x * y = k
+    const k = yoloReserve * stockReserve;
+    const newStockReserve = stockReserve + stockAmount;
+    const newYoloReserve = k / newStockReserve;
+    const yoloAmount = yoloReserve - newYoloReserve;
+    
+    const pricePerStock = yoloAmount > 0 ? yoloAmount / stockAmount : 0;
+    const currentPrice = yoloReserve / stockReserve;
+    const priceImpact = pricePerStock > 0 ? ((currentPrice - pricePerStock) / currentPrice) * 100 : 0;
+
+    return {
+      yoloAmount: yoloAmount, // 保持原始精度，不强制截断
+      pricePerStock,
+      priceImpact
+    };
+  }
+
+  // 执行买入交易
+  static async executeBuyTransaction(
+    userId: string, 
+    stockId: string, 
+    yoloAmount: number
+  ): Promise<{ success: boolean; message: string; transaction?: any }> {
+    try {
+      this.checkSupabaseConfig();
+
+      // 1. 获取用户余额
+      const userBalance = await this.getUserBalance(userId);
+      if (userBalance.balance < yoloAmount) {
+        return { success: false, message: '余额不足' };
+      }
+
+      // 2. 获取流动性池信息
+      const pool = await this.getLiquidityPool(stockId);
+      if (!pool) {
+        return { success: false, message: '流动性池不存在' };
+      }
+
+      // 3. 计算交易结果
+      const { stockAmount, pricePerStock } = this.calculateBuyPrice(
+        pool.yolo_reserve, 
+        pool.stock_reserve, 
+        yoloAmount
+      );
+
+      if (stockAmount <= 0) {
+        return { success: false, message: '交易金额过小' };
+      }
+
+      // 4. 更新流动性池
+      const newYoloReserve = pool.yolo_reserve + yoloAmount;
+      const newStockReserve = pool.stock_reserve - stockAmount;
+      const newKConstant = newYoloReserve * newStockReserve;
+
+      const { error: poolError } = await supabase
+        .from('liquidity_pools')
+        .update({
+          yolo_reserve: newYoloReserve,
+          stock_reserve: newStockReserve,
+          k_constant: newKConstant
+        })
+        .eq('stock_id', stockId);
+
+      if (poolError) {
+        return { success: false, message: `更新流动性池失败: ${poolError.message}` };
+      }
+
+      // 5. 扣除用户YOLO余额
+      await this.deductUserBalance(userId, yoloAmount);
+
+      // 6. 更新用户持股
+      await this.updateUserHolding(userId, stockId, stockAmount, pricePerStock, 'buy');
+
+      // 7. 记录交易
+      const { data: transaction, error: transactionError } = await supabase
+        .from('transactions')
+        .insert({
+          user_id: userId,
+          stock_id: stockId,
+          transaction_type: 'buy',
+          shares: stockAmount, // 支持小数精度
+          price_per_share: pricePerStock,
+          total_amount: yoloAmount,
+          created_at: new Date().toISOString()
+        })
+        .select()
+        .single();
+
+      if (transactionError && !transactionError.message.includes('relation "transactions" does not exist')) {
+        console.warn('记录交易失败:', transactionError);
+      }
+
+      // 8. 更新股票价格
+      await this.updateStockPrice(stockId, pricePerStock);
+
+      return { 
+        success: true, 
+        message: `成功购买 ${stockAmount.toFixed(6)} 股`, 
+        transaction 
+      };
+
+    } catch (error) {
+      console.error('Error in executeBuyTransaction:', error);
+      return { success: false, message: '交易执行失败' };
+    }
+  }
+
+  // 执行卖出交易
+  static async executeSellTransaction(
+    userId: string, 
+    stockId: string, 
+    stockAmount: number
+  ): Promise<{ success: boolean; message: string; transaction?: any }> {
+    try {
+      this.checkSupabaseConfig();
+
+      // 1. 检查用户持股
+      const userHolding = await this.getUserStockHolding(userId, stockId);
+      if (!userHolding || userHolding.shares < stockAmount) {
+        return { success: false, message: '持股不足' };
+      }
+
+      // 2. 获取流动性池信息
+      const pool = await this.getLiquidityPool(stockId);
+      if (!pool) {
+        return { success: false, message: '流动性池不存在' };
+      }
+
+      // 3. 计算交易结果
+      const { yoloAmount, pricePerStock } = this.calculateSellPrice(
+        pool.yolo_reserve, 
+        pool.stock_reserve, 
+        stockAmount
+      );
+
+      if (yoloAmount <= 0) {
+        return { success: false, message: '交易金额过小' };
+      }
+
+      // 4. 更新流动性池
+      const newYoloReserve = pool.yolo_reserve - yoloAmount;
+      const newStockReserve = pool.stock_reserve + stockAmount;
+      const newKConstant = newYoloReserve * newStockReserve;
+
+      const { error: poolError } = await supabase
+        .from('liquidity_pools')
+        .update({
+          yolo_reserve: newYoloReserve,
+          stock_reserve: newStockReserve,
+          k_constant: newKConstant
+        })
+        .eq('stock_id', stockId);
+
+      if (poolError) {
+        return { success: false, message: `更新流动性池失败: ${poolError.message}` };
+      }
+
+      // 5. 增加用户YOLO余额
+      await this.addUserBalance(userId, yoloAmount);
+
+      // 6. 更新用户持股
+      await this.updateUserHolding(userId, stockId, -stockAmount, pricePerStock, 'sell');
+
+      // 7. 记录交易
+      const { data: transaction, error: transactionError } = await supabase
+        .from('transactions')
+        .insert({
+          user_id: userId,
+          stock_id: stockId,
+          transaction_type: 'sell',
+          shares: stockAmount, // 支持小数精度
+          price_per_share: pricePerStock,
+          total_amount: yoloAmount,
+          created_at: new Date().toISOString()
+        })
+        .select()
+        .single();
+
+      if (transactionError && !transactionError.message.includes('relation "transactions" does not exist')) {
+        console.warn('记录交易失败:', transactionError);
+      }
+
+      // 8. 更新股票价格
+      await this.updateStockPrice(stockId, pricePerStock);
+
+      return { 
+        success: true, 
+        message: `成功卖出 ${stockAmount} 股，获得 ${yoloAmount.toFixed(2)} YOLO`, 
+        transaction 
+      };
+
+    } catch (error) {
+      console.error('Error in executeSellTransaction:', error);
+      return { success: false, message: '交易执行失败' };
+    }
+  }
+
+  // 获取用户特定股票的持股信息
+  static async getUserStockHolding(userId: string, stockId: string): Promise<any | null> {
+    try {
+      this.checkSupabaseConfig();
+      
+      const { data, error } = await supabase
+        .from('user_holdings')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('stock_id', stockId)
+        .single();
+
+      if (error && !error.message.includes('relation "user_holdings" does not exist')) {
+        console.error('Error fetching user stock holding:', error);
+        return null;
+      }
+
+      return data;
+    } catch (error: any) {
+      if (!error.message?.includes('relation "user_holdings" does not exist')) {
+        console.error('Error in getUserStockHolding:', error);
+      }
+      return null;
+    }
+  }
+
+  // 更新用户持股
+  private static async updateUserHolding(
+    userId: string, 
+    stockId: string, 
+    sharesDelta: number, 
+    price: number, 
+    type: 'buy' | 'sell'
+  ) {
+    try {
+      const existingHolding = await this.getUserStockHolding(userId, stockId);
+      
+      if (existingHolding) {
+        // 更新现有持股
+        const newShares = existingHolding.shares + sharesDelta;
+        const newTotalInvestment = type === 'buy' 
+          ? existingHolding.total_investment + (sharesDelta * price)
+          : existingHolding.total_investment - (Math.abs(sharesDelta) * existingHolding.average_price);
+        
+        const newAveragePrice = newShares > 0 ? newTotalInvestment / newShares : 0;
+
+        const { error } = await supabase
+          .from('user_holdings')
+          .update({
+            shares: Math.max(0, newShares),
+            average_price: newAveragePrice,
+            total_investment: Math.max(0, newTotalInvestment)
+          })
+          .eq('user_id', userId)
+          .eq('stock_id', stockId);
+
+        if (error && !error.message.includes('relation "user_holdings" does not exist')) {
+          throw error;
+        }
+      } else if (type === 'buy' && sharesDelta > 0) {
+        // 创建新的持股记录
+        const { error } = await supabase
+          .from('user_holdings')
+          .insert({
+            user_id: userId,
+            stock_id: stockId,
+            shares: sharesDelta,
+            average_price: price,
+            total_investment: sharesDelta * price,
+            created_at: new Date().toISOString()
+          });
+
+        if (error && !error.message.includes('relation "user_holdings" does not exist')) {
+          throw error;
+        }
+      }
+    } catch (error: any) {
+      if (!error.message?.includes('relation "user_holdings" does not exist')) {
+        throw error;
+      }
+    }
+  }
+
+  // 增加用户余额
+  private static async addUserBalance(userId: string, amount: number) {
+    try {
+      const { data: currentBalance, error: fetchError } = await supabase
+        .from('user_balances')
+        .select('balance')
+        .eq('user_id', userId)
+        .single();
+
+      if (fetchError && !fetchError.message.includes('relation "user_balances" does not exist')) {
+        throw fetchError;
+      }
+
+      if (currentBalance) {
+        const { error: updateError } = await supabase
+          .from('user_balances')
+          .update({ 
+            balance: currentBalance.balance + amount
+          })
+          .eq('user_id', userId);
+
+        if (updateError) {
+          throw updateError;
+        }
+      } else {
+        const { error: insertError } = await supabase
+          .from('user_balances')
+          .insert({
+            user_id: userId,
+            balance: 8000 + amount,
+            created_at: new Date().toISOString()
+          });
+
+        if (insertError && !insertError.message.includes('relation "user_balances" does not exist')) {
+          throw insertError;
+        }
+      }
+    } catch (error: any) {
+      if (!error.message?.includes('relation "user_balances" does not exist')) {
+        throw error;
+      }
+    }
+  }
+
+  // 更新股票价格
+  private static async updateStockPrice(stockId: string, newPrice: number) {
+    try {
+      const { error } = await supabase
+        .from('stock')
+        .update({ price: newPrice })
+        .eq('id', stockId);
+
+      if (error) {
+        console.warn('更新股票价格失败:', error);
+      }
+    } catch (error) {
+      console.warn('更新股票价格时发生错误:', error);
+    }
+  }
+
+  // 获取当前市场价格（基于流动性池）
+  static async getCurrentMarketPrice(stockId: string): Promise<number> {
+    try {
+      const pool = await this.getLiquidityPool(stockId);
+      if (!pool || pool.stock_reserve <= 0) {
+        // 如果没有流动性池，返回股票表中的价格
+        const stock = await this.getStockDetails(stockId);
+        return stock?.price || 1;
+      }
+
+      return pool.yolo_reserve / pool.stock_reserve;
+    } catch (error) {
+      console.error('Error getting current market price:', error);
+      return 1;
+    }
   }
 }

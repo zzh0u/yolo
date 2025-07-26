@@ -72,7 +72,7 @@ export default function CreatePage() {
 
   // 计算投资相关数据
   const totalStockValue = formData.price * formData.supply; // 股票总价值
-  const userShares = Math.floor(formData.supply * 0.35); // 用户获得35%股份
+  const userShares = formData.supply * 0.35; // 用户获得35%股份，支持小数
   const actualInvestment = formData.price * userShares; // 用户实际支付金额
   const investmentPercentage = (actualInvestment / userBalance.balance) * 100;
 
@@ -228,13 +228,14 @@ export default function CreatePage() {
                     <Input
                       id="supply"
                       type="number"
+                      step="0.00000001"
                       value={formData.supply}
                       onChange={(e) => setFormData(prev => ({ ...prev, supply: Number(e.target.value) }))}
-                      min="1"
+                      min="0.00000001"
                       max="1000000"
                       className="bg-background text-foreground"
                     />
-                    <p className="text-sm text-gray-400 mt-1">建议发行量：1,000 - 100,000 股</p>
+                    <p className="text-sm text-gray-400 mt-1">建议发行量：1,000 - 100,000 股（支持小数精度）</p>
                   </div>
 
                   <div>
@@ -329,7 +330,7 @@ export default function CreatePage() {
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-400">流动性池：</span>
-                        <span className="text-white">{Math.floor(formData.supply * 0.65).toLocaleString()} 股 (65%)</span>
+                        <span className="text-white">{(formData.supply * 0.65).toLocaleString()} 股 (65%)</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-400">项目图片：</span>

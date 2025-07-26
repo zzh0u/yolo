@@ -6,8 +6,8 @@ export interface Stock {
   symbol: string;
   image_url: string;
   owners: number;
-  supply: number;
-  price: number; // 发行价格（YOLO币）
+  supply: number; // 流通量，支持小数精度（DECIMAL(20,8)）
+  price: number; // 发行价格（YOLO币），支持小数精度
   created_at: string;
 }
 
@@ -16,10 +16,10 @@ export interface LiquidityPool {
   id: string;
   stock_id: string;
   creator_id: string;
-  yolo_reserve: number;
-  stock_reserve: number;
-  total_supply: number;
-  k_constant: number;
+  yolo_reserve: number; // YOLO币储备，支持小数精度
+  stock_reserve: number; // 股票储备，支持小数精度（DECIMAL(20,8)）
+  total_supply: number; // 总供应量，支持小数精度（DECIMAL(20,8)）
+  k_constant: number; // AMM常数，支持高精度
   created_at: string;
 }
 
@@ -28,9 +28,9 @@ export interface UserHolding {
   id: string;
   user_id: string;
   stock_id: string;
-  shares: number;
-  average_price: number;
-  total_investment: number;
+  shares: number; // 持股数量，支持小数精度（DECIMAL(20,8)）
+  average_price: number; // 平均价格，支持小数精度
+  total_investment: number; // 总投资额，支持小数精度
   created_at: string;
   stock?: Stock; // 关联的股票信息
 }
@@ -41,9 +41,9 @@ export interface Transaction {
   user_id: string;
   stock_id: string;
   transaction_type: 'buy' | 'sell' | 'create';
-  shares: number;
-  price_per_share: number;
-  total_amount: number;
+  shares: number; // 交易股份数量，支持小数精度（DECIMAL(20,8)）
+  price_per_share: number; // 每股价格，支持小数精度
+  total_amount: number; // 交易总额，支持小数精度
   created_at: string;
 }
 
@@ -52,8 +52,8 @@ export interface CreateStockData {
   name: string;
   symbol: string;
   image_url?: string;
-  supply: number;
-  price: number; // 发行价格（YOLO币）
+  supply: number; // 流通量，支持小数精度
+  price: number; // 发行价格（YOLO币），支持小数精度
 }
 
 // 表单数据（不包含图片文件）
@@ -61,8 +61,8 @@ export interface StockFormData {
   name: string;
   symbol: string;
   story: string;
-  supply: number;
-  price: number; // 发行价格
+  supply: number; // 流通量，支持小数精度
+  price: number; // 发行价格，支持小数精度
 }
 
 // 用户YOLO币余额信息

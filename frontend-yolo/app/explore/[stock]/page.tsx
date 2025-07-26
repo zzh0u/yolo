@@ -1,6 +1,6 @@
 "use client";
 import { useParams } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import StockHeader from "@/components/detail/product-header";
 import StatsBar from "@/components/detail/stats-bar";
 import SwapPanel from "@/components/detail/swap-panel";
@@ -11,26 +11,88 @@ import ActivityTab from "@/components/detail/activity-tab";
 import ContactTab from "@/components/detail/contact-tab";
 import GlassSurface from "@/components/react-bits/glass-surface";
 import Link from "next/link";
-import { Home, Compass, PlusCircle, User } from "lucide-react";
+import { Home, Compass, PlusCircle, User, Loader2 } from "lucide-react";
+import { StockService } from "@/service/stockService";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function ProductPage() {
     const { stock } = useParams();
+    const { user } = useAuth();
     const [selectedDate, setSelectedDate] = useState<string | null>(null);
+    const [stockData, setStockData] = useState<any>(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
-    // Static data based on the new screenshot
-    const staticData = {
-        name: "Cohol",
-        symbol: "CHC",
-        price: "725.528",
-        change: "+72%",
-        chain: "YOLO",
-        marketCap: "$189.3M",
-        volume: "$1.6M",
-        priceChange: "+97.1%",
-        marketCapChange: "+97.1%",
+    // 加载股票数据
+    useEffect(() => {
+        if (stock) {
+            loadStockData();
+        }
+    }, [stock]);
+
+    const loadStockData = async () => {
+         try {
+             setLoading(true);
+             setError(null);
+             
+             // 获取单个股票的增强数据
+             const data = await StockService.getSingleStockEnhancedData(stock as string);
+             
+             if (!data) {
+                 setError('股票不存在');
+                 return;
+             }
+             
+             setStockData(data);
+         } catch (error) {
+             console.error('加载股票数据失败:', error);
+             setError('加载股票数据失败');
+         } finally {
+             setLoading(false);
+         }
+     };
+
+    // 格式化数字显示
+    const formatNumber = (num: number) => {
+        if (num >= 1000000) {
+            return (num / 1000000).toFixed(1) + 'M';
+        } else if (num >= 1000) {
+            return (num / 1000).toFixed(1) + 'K';
+        }
+        return num.toFixed(2);
     };
 
+    // 格式化百分比
+    const formatPercentage = (num: number) => {
+        const sign = num >= 0 ? '+' : '';
+        return `${sign}${num.toFixed(1)}%`;
+    };
 
+    // 加载中状态
+    if (loading) {
+        return (
+            <div className="flex min-h-screen bg-zinc-950 text-white items-center justify-center">
+                <div className="flex flex-col items-center gap-4">
+                    <Loader2 className="h-8 w-8 animate-spin" />
+                    <p className="text-gray-400">加载股票数据中...</p>
+                </div>
+            </div>
+        );
+    }
+
+    // 错误状态
+    if (error || !stockData) {
+        return (
+            <div className="flex min-h-screen bg-zinc-950 text-white items-center justify-center">
+                <div className="flex flex-col items-center gap-4">
+                    <p className="text-red-400">{error || '股票数据不存在'}</p>
+                    <Link href="/discover" className="text-blue-400 hover:underline">
+                        返回发现页面
+                    </Link>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="flex min-h-screen bg-zinc-950 text-white">
@@ -41,22 +103,27 @@ export default function ProductPage() {
                 <div className="flex flex-col xl:flex-row flex-grow gap-8">
                     <main className="flex-grow flex flex-col gap-6">
                         <StockHeader
-                            name={staticData.name}
-                            symbol={staticData.symbol}
-                            price={staticData.price}
-                            change={staticData.change}
+                            name={stockData.name}
+                            symbol={stockData.symbol}
+                            price={stockData.current_price?.toFixed(4) || '0.0000'}
+                            change={formatPercentage(stockData.daily_change || 0)}
                         />
                         <TradingViewChart onTimeClick={setSelectedDate} />
-                        <StatsBar
-                            chain={staticData.chain}
-                            marketCap={staticData.marketCap}
-                            volume={staticData.volume}
-                            priceChange={staticData.priceChange}
-                            marketCapChange={staticData.marketCapChange}
-                        />
+                         <StatsBar
+                             chain="YOLO"
+                             marketCap={`$${formatNumber(stockData.market_cap || 0)}`}
+                             volume={`$${formatNumber(stockData.daily_volume || 0)}`}
+                             priceChange={formatPercentage(stockData.daily_change || 0)}
+                             marketCapChange={formatPercentage(stockData.daily_change || 0)}
+                         />
                     </main>
                     <aside className="w-full xl:w-1/3 xl:max-w-md">
-                        <SwapPanel />
+                        <SwapPanel 
+                            stockId={stockData.id}
+                            stockSymbol={stockData.symbol}
+                            stockName={stockData.name}
+                            stockImageUrl={stockData.image_url}
+                        />
                     </aside>
                 </div>
 
@@ -68,14 +135,14 @@ export default function ProductPage() {
                             <TabsTrigger value="contact" className="data-[state=active]:bg-transparent data-[state=active]:text-white data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-white rounded-none px-1 py-3 text-zinc-400">联系</TabsTrigger>
                         </TabsList>
                         <TabsContent value="overview" className="mt-6">
-                            <OverviewTab />
-                        </TabsContent>
-                        <TabsContent value="activity" className="mt-6">
-                            <ActivityTab highlightDate={selectedDate || undefined} />
-                        </TabsContent>
-                        <TabsContent value="contact" className="mt-6">
-                            <ContactTab />
-                        </TabsContent>
+                             <OverviewTab />
+                         </TabsContent>
+                         <TabsContent value="activity" className="mt-6">
+                             <ActivityTab highlightDate={selectedDate || undefined} />
+                         </TabsContent>
+                         <TabsContent value="contact" className="mt-6">
+                             <ContactTab />
+                         </TabsContent>
                     </Tabs>
                 </div>
             </div>

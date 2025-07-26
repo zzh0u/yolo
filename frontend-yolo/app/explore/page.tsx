@@ -20,7 +20,7 @@ interface StockData {
   symbol: string;
   image_url?: string;
   price: number;
-  supply: number;
+  supply: number; // 流通量，支持小数精度（DECIMAL(20,8)）
   owners: number;
   created_at: string;
   user_id: string;

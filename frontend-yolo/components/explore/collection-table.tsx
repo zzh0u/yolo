@@ -22,7 +22,7 @@ import {
     symbol: string;
     image_url?: string;
     price: number;
-    supply: number;
+    supply: number; // 流通量，支持小数精度（DECIMAL(20,8)）
     owners: number;
     created_at: string;
     user_id: string;
@@ -63,6 +63,17 @@ import {
       return `${(value / 1000).toFixed(1)}K YOLO`;
     }
     return `${value.toFixed(2)} YOLO`;
+  }
+
+  function formatSupply(value: number) {
+    if (value >= 1000000) {
+      return `${(value / 1000000).toFixed(2)}M`;
+    }
+    if (value >= 1000) {
+      return `${(value / 1000).toFixed(2)}K`;
+    }
+    // 对于小数，显示最多8位小数，但去掉尾随的0
+    return value.toFixed(8).replace(/\.?0+$/, '');
   }
   
   export function CollectionTable({ stocks = [] }: CollectionTableProps) {
@@ -134,7 +145,7 @@ import {
                 <TableCell className="text-white">{formatCurrency(stock.dailyVolume)}</TableCell>
                 <TableCell className="text-white">{formatCurrency(stock.marketCap)}</TableCell>
                 <TableCell className="text-white">{stock.owners.toLocaleString()}</TableCell>
-                <TableCell className="text-white">{stock.supply.toLocaleString()}</TableCell>
+                <TableCell className="text-white">{formatSupply(stock.supply)}</TableCell>
                 <TableCell>
                   <MiniLineChart 
                     color={stock.dailyChange > 0 ? "#22c55e" : "#ef4444"} 
