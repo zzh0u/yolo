@@ -69,6 +69,14 @@ const Timeline = () => {
     }
   };
 
+  // 处理用户点击跳转到股票页面
+  const handleUserClick = (activity: TimelineActivity) => {
+    const stockSymbol = activity.user_stock?.symbol;
+    if (stockSymbol) {
+      router.push(`/explore/${stockSymbol}`);
+    }
+  };
+
   // 获取用户显示信息
   const getUserInfo = (activity: TimelineActivity) => {
     const displayName = TimelineService.getUserDisplayName(activity);
@@ -139,13 +147,16 @@ const Timeline = () => {
                   
                   <div className="flex gap-4 p-6 transition-all duration-200 hover:bg-gray-900/30 border-b border-gray-800/50">
                     {/* 头像 */}
-                    <div className="relative">
+                    <div 
+                      className="relative cursor-pointer"
+                      onClick={() => handleUserClick(activity)}
+                    >
                       <AvatarWithFallback
                         src={avatarUrl}
                         name={displayName}
                         alt={`${displayName}'s avatar`}
                         size={48}
-                        className="ring-2 ring-gray-800 transition-all duration-200 group-hover:ring-gray-600"
+                        className="ring-2 ring-gray-800 transition-all duration-200 group-hover:ring-gray-600 hover:ring-blue-500"
                       />
                     </div>
 
@@ -153,7 +164,10 @@ const Timeline = () => {
                       {/* 用户信息和时间 */}
                       <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center gap-2">
-                          <span className="font-semibold text-white hover:underline cursor-pointer transition-colors">
+                          <span 
+                            className="font-semibold text-white hover:underline cursor-pointer transition-colors hover:text-blue-400"
+                            onClick={() => handleUserClick(activity)}
+                          >
                             {displayName}
                           </span>
                           <span className="text-gray-500 text-sm">·</span>

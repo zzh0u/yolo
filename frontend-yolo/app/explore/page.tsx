@@ -216,7 +216,7 @@ export default function DiscoverPage() {
         <header className="flex justify-between items-center mb-6">
           <div className="flex items-center justify-between gap-4 w-full">
             {/* 搜索框 */}
-            <div className="relative">
+            {/* <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={20}/>
               <Input 
                 placeholder="Search stocks..." 
@@ -224,7 +224,7 @@ export default function DiscoverPage() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
-            </div>
+            </div> */}
 
             {/* 榜单选择 */}
             <Tabs value={activeTab} onValueChange={handleTabChange}>
@@ -282,7 +282,6 @@ export default function DiscoverPage() {
       <div className="fixed bottom-6 right-6 z-50 bg-gray-200 rounded-full text-black">
         <GlassSurface 
           className="w-auto h-16 rounded-full"
-          brightness={200}
 
         >
           <div className="flex flex-row items-center justify-evenly gap-4 px-6">
