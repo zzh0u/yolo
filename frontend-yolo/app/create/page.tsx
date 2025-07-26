@@ -124,23 +124,37 @@ export default function CreatePage() {
     setError(null);
 
     try {
+      // 验证投资金额
+      const validation = await StockService.validateInvestment(user.id, formData.price, formData.supply);
+      if (!validation.valid) {
+        setError(validation.message || '投资验证失败');
+        return;
+      }
+
       let imageUrl = '';
       
       // 上传图片或生成默认头像
       if (formData.image) {
-        imageUrl = await StockService.uploadImage(formData.image, formData.symbol);
+        try {
+          imageUrl = await StockService.uploadImage(formData.image, formData.symbol);
+        } catch (uploadError) {
+          console.warn('图片上传失败，使用默认头像:', uploadError);
+          imageUrl = StockService.generateDefaultAvatar(formData.name);
+        }
       } else {
         imageUrl = StockService.generateDefaultAvatar(formData.name);
       }
 
       // 创建股票
-      await StockService.createStock({
+      const newStock = await StockService.createStock({
         name: formData.name,
         symbol: formData.symbol,
         image: imageUrl,
         supply: formData.supply,
         price: formData.price
       }, user.id);
+
+      console.log('股票创建成功:', newStock);
 
       // 跳转到探索页面
       router.push('/explore');
