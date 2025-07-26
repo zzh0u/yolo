@@ -1,4 +1,5 @@
-import React from 'react';
+"use client"
+import React, { useEffect, useState } from 'react';
 import CreatePost from '@/components/explore/create-post';
 import { MoreHorizontal, CheckCircle, TrendingUp, TrendingDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -10,7 +11,6 @@ const threads = [
     id: 1,
     user: {
       name: 'Sidessh',
-      handle: '@SidesshMore',
       avatar: '/img/sam.png',
       verified: true,
       yoloStockValue: 12345, 
@@ -22,7 +22,6 @@ const threads = [
     id: 2,
     user: {
       name: 'Saanvi',
-      handle: '@Saaannvvii',
       avatar: '/img/elon.png',
       verified: true,
       yoloStockValue: 54321,
@@ -34,7 +33,6 @@ const threads = [
     id: 3,
     user: {
       name: 'Enod Bataa',
-      handle: '@enod_bataa',
       avatar: '/img/jobs.png',
       verified: false,
       yoloStockValue: 67890,
@@ -46,7 +44,6 @@ const threads = [
     id: 4,
     user: {
       name: 'Urja Kohli',
-      handle: '@urja_kohli',
       avatar: '/img/sam.png',
       verified: true,
       yoloStockValue: 23456,
@@ -58,7 +55,6 @@ const threads = [
     id: 5,
     user: {
       name: 'Fede',
-      handle: '@buildwithfede',
       avatar: '/img/elon.png',
       verified: true,
       yoloStockValue: 98765,
@@ -70,7 +66,6 @@ const threads = [
     id: 6,
     user: {
       name: 'Alex Ruber',
-      handle: '@alex_ruber',
       avatar: '/img/jobs.png',
       verified: true,
       yoloStockValue: 123456,
@@ -86,7 +81,6 @@ experimented with super long (60+ seconds) this time for tt. only 130k views so 
     id: 7,
     user: {
       name: 'Sidessh',
-      handle: '@SidesshMore',
       avatar: '/img/sam.png',
       verified: true,
       yoloStockValue: 76543,
@@ -98,7 +92,6 @@ experimented with super long (60+ seconds) this time for tt. only 130k views so 
     id: 8,
     user: {
       name: 'Saanvi',
-      handle: '@Saaannvvii',
       avatar: '/img/elon.png',
       verified: true,
       yoloStockValue: 87654,
@@ -110,7 +103,6 @@ experimented with super long (60+ seconds) this time for tt. only 130k views so 
     id: 9,
     user: {
       name: 'Enod Bataa',
-      handle: '@enod_bataa',
       avatar: '/img/jobs.png',
       verified: false,
       yoloStockValue: 34567,
@@ -122,7 +114,6 @@ experimented with super long (60+ seconds) this time for tt. only 130k views so 
     id: 10,
     user: {
       name: 'Urja Kohli',
-      handle: '@urja_kohli',
       avatar: '/img/sam.png',
       verified: true,
       yoloStockValue: 45678,
@@ -134,7 +125,6 @@ experimented with super long (60+ seconds) this time for tt. only 130k views so 
     id: 11,
     user: {
       name: 'Fede',
-      handle: '@buildwithfede',
       avatar: '/img/elon.png',
       verified: true,
       yoloStockValue: 111111,
@@ -146,7 +136,6 @@ experimented with super long (60+ seconds) this time for tt. only 130k views so 
     id: 12,
     user: {
       name: 'Alex Ruber',
-      handle: '@alex_ruber',
       avatar: '/img/jobs.png',
       verified: true,
       yoloStockValue: 222222,
@@ -156,14 +145,34 @@ experimented with super long (60+ seconds) this time for tt. only 130k views so 
   },
 ];
 
+interface NewThread {
+  userId: number;
+  content: string;
+}
+
 const Timeline = () => {
   const router = useRouter();
+  const [remoteThreads, setRemoteThreads] = useState<any[]>([]);
+
+
   const handleBuy = (stock: string) => {
     router.push(`/explore/${stock}`)
   }
   const handleSell = (stock: string) => {
     router.push(`/explore/${stock}`)
   }
+
+  useEffect(() => {
+    const fetchThreads = async () => {
+      const response = await fetch('/api/get-all-threads');
+      const data = await response.json();
+
+      // TODO: 
+      setRemoteThreads(data.threads);
+    }
+    fetchThreads();
+  }, []);
+
 
   return (
 

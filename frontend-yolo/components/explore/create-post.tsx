@@ -1,10 +1,31 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Image as ImageIcon, ListOrdered, Smile, Calendar, MapPin, Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 const userAvatar = "https://pbs.twimg.com/profile_images/1638618797188599808/DXIXe_4Q_400x400.jpg";
 
+interface NewThread {
+    userId: number;
+    content: string;
+}
+
 const CreatePost = () => {
+    const [newThread, setNewThread] = useState<NewThread>({
+        userId: 1, // TODO: get user id from session
+        content: 'Test content',
+    });
+    const handleCreateThread = async (thread: NewThread) => {
+        const response = await fetch('http://localhost:8080/api/v1/threads', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(thread),
+        });
+        const data = await response.json();
+        console.log(data);
+    }
+
     return (
         <div className="flex gap-4 p-4 border-b border-gray-800">
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -14,6 +35,8 @@ const CreatePost = () => {
                     placeholder="What's happening?"
                     className="w-full bg-transparent text-2xl placeholder-gray-500 focus:outline-none resize-none"
                     rows={1}
+                    value={newThread.content}
+                    onChange={(e) => setNewThread({ ...newThread, content: e.target.value })}
                 />
 
 
@@ -25,7 +48,7 @@ const CreatePost = () => {
                     </div>
                     <Button
                         className="bg-sky-500 hover:bg-sky-600 text-white font-bold py-2 px-4 rounded-full disabled:opacity-50 text-base flex items-center gap-2 transition-colors"
-                        disabled
+                        onClick={() => handleCreateThread(newThread)}
                     >
                         <Send size={16} />
                         <span>Build in Public</span>
