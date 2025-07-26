@@ -46,22 +46,46 @@ export class UserProfileService {
     }
   ): Promise<UserProfile> {
     try {
-      const { data, error } = await supabase
-        .from('user_profiles')
-        .upsert({
-          user_id: userId,
-          description: profileData.description || null,
-          rednote_link: profileData.rednote_link || null,
-          bonjour_link: profileData.bonjour_link || null,
-        })
-        .select()
-        .single();
+      // 首先检查用户是否已有profile记录
+      const existingProfile = await this.getUserProfile(userId);
+      
+      if (existingProfile) {
+        // 如果存在，则更新记录
+        const { data, error } = await supabase
+          .from('user_profiles')
+          .update({
+            description: profileData.description || null,
+            rednote_link: profileData.rednote_link || null,
+            bonjour_link: profileData.bonjour_link || null,
+          })
+          .eq('user_id', userId)
+          .select()
+          .single();
 
-      if (error) {
-        throw error;
+        if (error) {
+          throw error;
+        }
+
+        return data;
+      } else {
+        // 如果不存在，则创建新记录
+        const { data, error } = await supabase
+          .from('user_profiles')
+          .insert({
+            user_id: userId,
+            description: profileData.description || null,
+            rednote_link: profileData.rednote_link || null,
+            bonjour_link: profileData.bonjour_link || null,
+          })
+          .select()
+          .single();
+
+        if (error) {
+          throw error;
+        }
+
+        return data;
       }
-
-      return data;
     } catch (error) {
       console.error('Error upserting user profile:', error);
       throw error;
