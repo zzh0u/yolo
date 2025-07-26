@@ -9,15 +9,217 @@ import TextPressure from "@/components/react-bits/text-pressure";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
+import { useState, useEffect, useCallback } from "react";
+import { StockService } from "@/service/stockService";
+import { Stock } from "@/app/create/types";
 
+// 定义股票数据接口，匹配 CollectionTable 的需求
+interface StockData {
+  id: string;
+  name: string;
+  symbol: string;
+  image_url?: string;
+  price: number;
+  supply: number;
+  owners: number;
+  created_at: string;
+  user_id: string;
+  // 计算字段
+  marketCap: number;
+  dailyChange: number;
+  dailyVolume: number;
+  status: "idea" | "prototype" | "demo" | "fundraising";
+  chartData: { value: number }[];
+}
+
+// 定义用户余额接口
+interface UserBalance {
+  balance: number;
+  maxInvestment: number;
+}
 
 export default function DiscoverPage() {
   const { user, loading, signOut } = useAuth()
+  
+  // 状态管理
+  const [stocks, setStocks] = useState<StockData[]>([])
+  const [filteredStocks, setFilteredStocks] = useState<StockData[]>([])
+  const [userBalance, setUserBalance] = useState<UserBalance>({ balance: 8000, maxInvestment: 8000 })
+  const [searchQuery, setSearchQuery] = useState("")
+  const [activeTab, setActiveTab] = useState("top")
+  const [isLoadingData, setIsLoadingData] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   // 添加调试信息
   console.log('DiscoverPage - loading:', loading, 'user:', user)
 
-  // 如果正在加载，显示加载状态
+  // 生成模拟图表数据
+  const generateChartData = useCallback(() => {
+    return Array.from({ length: 7 }, () => ({ value: Math.random() * 100 }));
+  }, [])
+
+  // 计算股票状态（基于创建时间和价格）
+  const calculateStockStatus = useCallback((stock: Stock): "idea" | "prototype" | "demo" | "fundraising" => {
+    const createdAt = new Date(stock.created_at);
+    const daysSinceCreation = Math.floor((Date.now() - createdAt.getTime()) / (1000 * 60 * 60 * 24));
+    const price = stock.price || 1;
+    
+    if (daysSinceCreation < 1) return "idea";
+    if (daysSinceCreation < 7 && price < 10) return "prototype";
+    if (daysSinceCreation < 30 && price < 50) return "demo";
+    return "fundraising";
+  }, [])
+
+  // 计算日变化率（模拟数据，实际应该基于历史价格）
+  const calculateDailyChange = useCallback((stock: Stock): number => {
+    // 基于股票符号生成一致的模拟变化率
+    const seed = stock.symbol.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    const random = (seed * 9301 + 49297) % 233280;
+    return ((random / 233280) - 0.5) * 40; // -20% 到 +20% 的变化
+  }, [])
+
+  // 计算日交易量（模拟数据，实际应该基于交易记录）
+  const calculateDailyVolume = useCallback((stock: Stock): number => {
+    const marketCap = (stock.price || 1) * stock.supply;
+    return marketCap * (0.01 + Math.random() * 0.1); // 市值的1-11%作为日交易量
+  }, [])
+
+  // 转换股票数据格式
+  const transformStockData = useCallback((stockList: Stock[]): StockData[] => {
+    return stockList.map(stock => {
+      const price = stock.price || 1;
+      const marketCap = price * stock.supply;
+      const dailyChange = calculateDailyChange(stock);
+      const dailyVolume = calculateDailyVolume(stock);
+      const status = calculateStockStatus(stock);
+      
+      return {
+        id: stock.id,
+        name: stock.name,
+        symbol: stock.symbol,
+        image_url: stock.image_url,
+        price,
+        supply: stock.supply,
+        owners: stock.owners || 1,
+        created_at: stock.created_at,
+        user_id: stock.user_id,
+        marketCap,
+        dailyChange,
+        dailyVolume,
+        status,
+        chartData: generateChartData()
+      };
+    });
+  }, [calculateDailyChange, calculateDailyVolume, calculateStockStatus, generateChartData])
+
+  // 获取所有股票数据
+  const fetchStocks = useCallback(async () => {
+    try {
+      setIsLoadingData(true);
+      setError(null);
+      
+      const stockList = await StockService.getAllStocks();
+      const transformedStocks = transformStockData(stockList);
+      
+      setStocks(transformedStocks);
+      setFilteredStocks(transformedStocks);
+    } catch (error) {
+      console.error('获取股票数据失败:', error);
+      setError('获取股票数据失败，请稍后重试');
+    } finally {
+      setIsLoadingData(false);
+    }
+  }, [transformStockData])
+
+  // 获取用户余额
+  const fetchUserBalance = useCallback(async () => {
+    if (!user?.id) return;
+    
+    try {
+      const balance = await StockService.getUserBalance(user.id);
+      setUserBalance(balance);
+    } catch (error) {
+      console.error('获取用户余额失败:', error);
+      // 使用默认余额，不显示错误
+    }
+  }, [user?.id])
+
+  // 搜索功能
+  const handleSearch = useCallback((query: string) => {
+    setSearchQuery(query);
+    
+    if (!query.trim()) {
+      setFilteredStocks(stocks);
+      return;
+    }
+    
+    const filtered = stocks.filter(stock => 
+      stock.name.toLowerCase().includes(query.toLowerCase()) ||
+      stock.symbol.toLowerCase().includes(query.toLowerCase())
+    );
+    
+    setFilteredStocks(filtered);
+  }, [stocks])
+
+  // 榜单筛选
+  const handleTabChange = useCallback((tab: string) => {
+    setActiveTab(tab);
+    
+    let sortedStocks = [...stocks];
+    
+    switch (tab) {
+      case "top":
+        // 按市值排序
+        sortedStocks.sort((a, b) => b.marketCap - a.marketCap);
+        break;
+      case "trending":
+        // 按日变化率排序
+        sortedStocks.sort((a, b) => b.dailyChange - a.dailyChange);
+        break;
+      case "watchlist":
+        // 如果用户已登录，显示用户创建的股票
+        if (user?.id) {
+          sortedStocks = sortedStocks.filter(stock => stock.user_id === user.id);
+        } else {
+          sortedStocks = [];
+        }
+        break;
+      default:
+        break;
+    }
+    
+    setFilteredStocks(sortedStocks);
+  }, [stocks, user?.id])
+
+  // 初始化数据
+  useEffect(() => {
+    if (!loading) {
+      fetchStocks();
+      if (user?.id) {
+        fetchUserBalance();
+      }
+    }
+  }, [loading, user?.id, fetchStocks, fetchUserBalance])
+
+  // 搜索查询变化时重新筛选
+  useEffect(() => {
+    handleSearch(searchQuery);
+  }, [searchQuery, handleSearch])
+
+  // 定期刷新数据（每30秒）
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (!loading && user?.id) {
+        fetchUserBalance();
+        // 可以选择性地刷新股票数据
+        // fetchStocks();
+      }
+    }, 30000);
+
+    return () => clearInterval(interval);
+  }, [loading, user?.id, fetchUserBalance])
+
+  // 如果正在加载认证状态，显示加载状态
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-[#141416]">
@@ -42,6 +244,14 @@ export default function DiscoverPage() {
     return "加载中..."
   }
 
+  // 格式化余额显示
+  const formatBalance = (balance: number) => {
+    return balance.toLocaleString('en-US', { 
+      minimumFractionDigits: 0, 
+      maximumFractionDigits: 2 
+    });
+  }
+
   return (
     <div className="flex flex-col h-auto w-screen bg-[#141416] text-gray-300">
       <div className="w-full h-42 flex items-center justify-center px-24">
@@ -62,13 +272,18 @@ export default function DiscoverPage() {
         <header className="flex justify-between items-center mb-6">
           <div className="flex items-center justify-between gap-4 w-full">
             {/* 搜索框 */}
-            {/* <div className="relative">
+            <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={20}/>
-              <Input placeholder="Search" className="w-80 pl-10 bg-transparent border-gray-700 focus:border-blue-500"/>
-            </div> */}
+              <Input 
+                placeholder="Search stocks..." 
+                className="w-80 pl-10 bg-transparent border-gray-700 focus:border-blue-500"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
 
             {/* 榜单选择 */}
-            <Tabs defaultValue="top">
+            <Tabs value={activeTab} onValueChange={handleTabChange}>
               <TabsList>
                 <TabsTrigger value="top">Top</TabsTrigger>
                 <TabsTrigger value="trending">Trending</TabsTrigger>
@@ -79,7 +294,9 @@ export default function DiscoverPage() {
             {/* 用户信息和余额 */}
             <div className="flex items-center gap-4" >
               <div className="flex items-center border border-gray-700 rounded-full px-4 py-2">
-                <span className="text-gray-500">My Balance: 8000 YOLO</span>
+                <span className="text-gray-500">
+                  My Balance: {formatBalance(userBalance.balance)} YOLO
+                </span>
               </div>
               
               {/* 用户邮箱和登出按钮 */}
@@ -99,7 +316,22 @@ export default function DiscoverPage() {
             </div>
           </div>
         </header>
-        <CollectionTable />
+        
+        {/* 错误提示 */}
+        {error && (
+          <div className="mb-4 p-4 bg-red-900/20 border border-red-700 rounded-lg text-red-300">
+            {error}
+          </div>
+        )}
+        
+        {/* 数据加载状态 */}
+        {isLoadingData ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="text-gray-400">Loading stocks...</div>
+          </div>
+        ) : (
+          <CollectionTable stocks={filteredStocks} />
+        )}
       </div>
       
       {/* 固定在右下角的按钮 */}
