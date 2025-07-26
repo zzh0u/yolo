@@ -1,0 +1,73 @@
+version: '3.8'
+
+services:
+  # PostgreSQL 数据库服务
+  postgres:
+    image: postgres:15-alpine
+    container_name: yolo-postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8"
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/schema.sql
+    networks:
+      - yolo-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      interval: ${PG_HEALTH_CHECK_INTERVAL:-10s}
+      timeout: ${PG_HEALTH_CHECK_TIMEOUT:-5s}
+      retries: ${PG_HEALTH_CHECK_RETRIES:-5}
+
+  # Go 后端 API 服务
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        APP_USER_ID: ${APP_USER_ID:-1001}
+        APP_GROUP_ID: ${APP_GROUP_ID:-1001}
+    container_name: yolo-backend
+    environment:
+      # 数据库配置
+      DB_HOST: ${DB_HOST:-postgres}
+      DB_PORT: ${DB_PORT:-5432}
+      DB_USER: ${POSTGRES_USER:-postgres}
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      DB_NAME: ${DB_NAME:-yolo_db}
+      DB_SSLMODE: ${DB_SSLMODE:-disable}
+      # 应用配置
+      GIN_MODE: ${GIN_MODE:-release}
+      JWT_SECRET: ${JWT_SECRET}
+      # 功能开关
+      SKIP_WEB3_INIT: "true"
+      # Google OAuth 配置（可选）
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+    ports:
+      - "${BACKEND_PORT:-8080}:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - yolo-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/health"]
+      interval: ${HEALTH_CHECK_INTERVAL:-30s}
+      timeout: ${HEALTH_CHECK_TIMEOUT:-10s}
+      retries: ${HEALTH_CHECK_RETRIES:-3}
+      start_period: ${HEALTH_CHECK_START_PERIOD:-40s}
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  yolo-network:
+    driver: bridge

@@ -1,0 +1,16 @@
+# 测试配置文件
+database:
+  type: "sqlite"
+  connection: ":memory:"
+  
+server:
+  port: "8080"
+  mode: "test"
+  
+jwt:
+  secret: "test-secret-key"
+  expiration: "24h"
+  
+logging:
+  level: "error"
+  format: "json"
