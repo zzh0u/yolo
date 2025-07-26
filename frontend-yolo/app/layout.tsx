@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import ClientLayout from "./ClientLayout";
 
 export const metadata: Metadata = {
   title: "YOLO - 创意分享平台",
@@ -14,7 +15,9 @@ export default function RootLayout({
   return (
     <html lang="zh-CN">
       <body className="font-sans antialiased">
-        {children}
+        <ClientLayout>
+          {children}
+        </ClientLayout>
       </body>
     </html>
   );
