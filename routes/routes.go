@@ -19,7 +19,7 @@ func SetupRoutes() *gin.Engine {
 
 	// 健康检查
 	router.GET("/health", func(c *gin.Context) {
-		c.JSON(200, gin.H{"status": "ok", "message": "YOLO API is running"})
+		c.JSON(200, gin.H{"status": "ok", "message": "YOLO API is running - User Management Only"})
 	})
 
 	// API版本分组
@@ -33,20 +33,12 @@ func SetupRoutes() *gin.Engine {
 		public.POST("/auth/login", controllers.Login)
 		public.POST("/auth/google", controllers.GoogleAuth)
 
-		// 公开的股票信息
-		public.GET("/stocks", controllers.GetStocks)
-		public.GET("/stocks/:symbol", controllers.GetStockDetail)
-
-		// 公开的帖子信息
-		public.GET("/posts/timeline", controllers.GetTimeline)
-
 		// 公开的用户信息
 		public.GET("/users/:username", controllers.GetUserPublicInfo)
 		public.GET("/users/:username/posts", controllers.GetUserPosts)
 
-		// 公开的Web3查询
-		public.GET("/web3/price", controllers.GetTokenPrice)
-		public.POST("/web3/balance", controllers.GetBalance)
+		// 公开的帖子信息（如果需要保留）
+		public.GET("/posts/timeline", controllers.GetTimeline)
 	}
 
 	// 需要认证的路由
@@ -57,23 +49,28 @@ func SetupRoutes() *gin.Engine {
 		protected.GET("/auth/me", controllers.GetCurrentUser)
 		protected.GET("/user/profile", controllers.GetUserProfile)
 		protected.PUT("/user/profile", controllers.UpdateUserProfile)
-		protected.GET("/user/balance", controllers.GetUserBalance)
-		protected.GET("/user/holdings", controllers.GetUserHoldings)
-		protected.GET("/user/trades", controllers.GetUserTrades)
 
-		// 帖子管理
+		// 帖子管理（如果需要保留）
 		protected.POST("/posts", controllers.CreatePost)
 
-		// 股票交易
-		protected.POST("/stocks/trade", controllers.TradeStock)
+		// ==================== 以下功能已停用 ====================
+		// 股票相关功能已停用
+		// protected.GET("/stocks", controllers.GetStocks)
+		// protected.GET("/stocks/:symbol", controllers.GetStockDetail)
+		// protected.POST("/stocks/trade", controllers.TradeStock)
+		
+		// 用户交易相关功能已停用
+		// protected.GET("/user/balance", controllers.GetUserBalance)
+		// protected.GET("/user/holdings", controllers.GetUserHoldings)
+		// protected.GET("/user/trades", controllers.GetUserTrades)
 
-		// Web3交易相关
-		protected.POST("/web3/deploy-token", controllers.DeployToken)
-		protected.POST("/web3/swap", controllers.SwapTokens)
-		protected.POST("/web3/add-liquidity", controllers.AddLiquidity)
-		protected.POST("/web3/transfer", controllers.TransferTokens)
+		// Web3交易相关功能已停用
+		// protected.POST("/web3/deploy-token", controllers.DeployToken)
+		// protected.POST("/web3/swap", controllers.SwapTokens)
+		// protected.POST("/web3/add-liquidity", controllers.AddLiquidity)
+		// protected.POST("/web3/transfer", controllers.TransferTokens)
 
-		// 赠送功能（TODO: 可延后开发）
+		// 赠送功能已停用
 		// protected.POST("/gifts/send", controllers.SendGift)
 		// protected.GET("/gifts/received", controllers.GetReceivedGifts)
 		// protected.GET("/gifts/sent", controllers.GetSentGifts)

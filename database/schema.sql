@@ -62,20 +62,6 @@ CREATE TABLE gift_records (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- 创建索引
-CREATE INDEX idx_users_username ON users(username);
-CREATE INDEX idx_users_email ON users(email);
-CREATE INDEX idx_user_tokens_symbol ON user_tokens(token_symbol);
-CREATE INDEX idx_user_tokens_user_id ON user_tokens(user_id);
-CREATE INDEX idx_user_holdings_user_id ON user_holdings(user_id);
-CREATE INDEX idx_user_holdings_token_id ON user_holdings(token_id);
--- K线图相关索引
-CREATE INDEX idx_price_history_token_timeframe ON price_history(token_id, timeframe, timestamp);
-CREATE INDEX idx_price_history_timestamp ON price_history(timestamp);
--- 赠送记录索引
-CREATE INDEX idx_gift_records_sender ON gift_records(sender_id);
-CREATE INDEX idx_gift_records_recipient ON gift_records(recipient_id);
-
 -- 创建触发器函数用于自动更新updated_at字段
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$

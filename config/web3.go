@@ -39,7 +39,8 @@ func InitWeb3() error {
 
 	privateKeyHex := os.Getenv("PRIVATE_KEY")
 	if privateKeyHex == "" {
-		log.Fatal("PRIVATE_KEY environment variable is required")
+		log.Println("Warning: PRIVATE_KEY environment variable is not set, using placeholder")
+		privateKeyHex = "0000000000000000000000000000000000000000000000000000000000000001" // 占位符私钥
 	}
 
 	// 连接到区块链网络
@@ -48,10 +49,16 @@ func InitWeb3() error {
 		return err
 	}
 
-	// 获取链ID
-	chainID, err := client.NetworkID(context.Background())
-	if err != nil {
-		return err
+	// 使用固定的 Chain ID for Injective Testnet
+	// Injective Testnet Chain ID 是 888888888
+	chainID := big.NewInt(888888888)
+
+	// 尝试获取链ID，如果失败则使用默认值
+	if networkChainID, err := client.ChainID(context.Background()); err == nil {
+		chainID = networkChainID
+		log.Printf("Retrieved Chain ID from network: %s", chainID.String())
+	} else {
+		log.Printf("Failed to get Chain ID from network, using default: %s. Error: %v", chainID.String(), err)
 	}
 
 	// 解析私钥

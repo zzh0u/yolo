@@ -85,10 +85,10 @@ func GetUserByID(c *gin.Context) {
 
 	// 返回公开信息
 	response := UserPublicInfo{
-		ID:             user.ID.String(),
-		Name:           user.Name,
-		Avatar:         user.Avatar,
-		YoloStockValue: user.YoloStockValue,
+		ID:     user.ID.String(),
+		Name:   user.Name,
+		Avatar: user.Avatar,
+		// YoloStockValue: user.YoloStockValue,
 	}
 
 	c.JSON(http.StatusOK, response)
@@ -124,10 +124,10 @@ func GetUserPosts(c *gin.Context) {
 		postResponses = append(postResponses, PostResponse{
 			ID: post.ID.String(),
 			User: UserPublicInfo{
-				ID:             post.User.ID.String(),
-				Name:           post.User.Name,
-				Avatar:         post.User.Avatar,
-				YoloStockValue: post.User.YoloStockValue,
+				ID:     post.User.ID.String(),
+				Name:   post.User.Name,
+				Avatar: post.User.Avatar,
+				// YoloStockValue: post.User.YoloStockValue,
 			},
 			Content:   post.Content,
 			Timestamp: post.Timestamp.Format("2006-01-02T15:04:05Z"),
@@ -183,7 +183,7 @@ func UpdateUserProfile(c *gin.Context) {
 func GetUserBalance(c *gin.Context) {
 	userID := utils.GetUserIDFromContext(c)
 
-	user, err := services.UserService.GetUserByID(userID)
+	_, err := services.UserService.GetUserByID(userID)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{
 			"error": "User not found",
@@ -192,291 +192,290 @@ func GetUserBalance(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"balance":     user.Balance,
 		"token_type":  "YOLO", // 平台基础token
 		"description": "Platform base tokens for trading",
 	})
 }
 
-// GetUserHoldings 获取用户持仓
-func GetUserHoldings(c *gin.Context) {
-	userID := utils.GetUserIDFromContext(c)
+// // GetUserHoldings 获取用户持仓
+// func GetUserHoldings(c *gin.Context) {
+// 	userID := utils.GetUserIDFromContext(c)
 
-	holdings, err := services.HoldingService.GetUserHoldings(userID)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error":   "Failed to get holdings",
-			"details": err.Error(),
-		})
-		return
-	}
+// 	holdings, err := services.HoldingService.GetUserHoldings(userID)
+// 	if err != nil {
+// 		c.JSON(http.StatusInternalServerError, gin.H{
+// 			"error":   "Failed to get holdings",
+// 			"details": err.Error(),
+// 		})
+// 		return
+// 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"holdings": holdings,
-	})
-}
+// 	c.JSON(http.StatusOK, gin.H{
+// 		"holdings": holdings,
+// 	})
+// }
 
-// SendGiftRequest 发送赠送请求
-type SendGiftRequest struct {
-	RecipientID string  `json:"recipient_id" binding:"required"`
-	StockID     string  `json:"stock_id" binding:"required"`
-	Quantity    float64 `json:"quantity" binding:"required,gt=0"`
-	Message     string  `json:"message" binding:"omitempty,max=500"`
-}
+// // SendGiftRequest 发送赠送请求
+// type SendGiftRequest struct {
+// 	RecipientID string  `json:"recipient_id" binding:"required"`
+// 	StockID     string  `json:"stock_id" binding:"required"`
+// 	Quantity    float64 `json:"quantity" binding:"required,gt=0"`
+// 	Message     string  `json:"message" binding:"omitempty,max=500"`
+// }
 
-// GiftResponse 赠送响应结构
-type GiftResponse struct {
-	ID        string         `json:"id"`
-	Sender    UserPublicInfo `json:"sender"`
-	Recipient UserPublicInfo `json:"recipient"`
-	Stock     StockInfo      `json:"stock"`
-	Quantity  float64        `json:"quantity"`
-	Message   *string        `json:"message"`
-	CreatedAt string         `json:"created_at"`
-}
+// // GiftResponse 赠送响应结构
+// type GiftResponse struct {
+// 	ID        string         `json:"id"`
+// 	Sender    UserPublicInfo `json:"sender"`
+// 	Recipient UserPublicInfo `json:"recipient"`
+// 	Stock     StockInfo      `json:"stock"`
+// 	Quantity  float64        `json:"quantity"`
+// 	Message   *string        `json:"message"`
+// 	CreatedAt string         `json:"created_at"`
+// }
 
-// StockInfo 股票信息
-type StockInfo struct {
-	ID     string  `json:"id"`
-	Name   string  `json:"name"`
-	Symbol string  `json:"symbol"`
-	Price  float64 `json:"price"`
-}
+// // StockInfo 股票信息
+// type StockInfo struct {
+// 	ID     string  `json:"id"`
+// 	Name   string  `json:"name"`
+// 	Symbol string  `json:"symbol"`
+// 	Price  float64 `json:"price"`
+// }
 
-// GiftsResponse 赠送列表响应
-type GiftsResponse struct {
-	Gifts    []GiftResponse `json:"gifts"`
-	PageInfo PageInfo       `json:"pageInfo"`
-}
+// // GiftsResponse 赠送列表响应
+// type GiftsResponse struct {
+// 	Gifts    []GiftResponse `json:"gifts"`
+// 	PageInfo PageInfo       `json:"pageInfo"`
+// }
 
-// SendGift 发送赠送
-func SendGift(c *gin.Context) {
-	userID := utils.GetUserIDFromContext(c)
+// // SendGift 发送赠送
+// func SendGift(c *gin.Context) {
+// 	userID := utils.GetUserIDFromContext(c)
 
-	var req SendGiftRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error":   "Invalid request data",
-			"details": err.Error(),
-		})
-		return
-	}
+// 	var req SendGiftRequest
+// 	if err := c.ShouldBindJSON(&req); err != nil {
+// 		c.JSON(http.StatusBadRequest, gin.H{
+// 			"error":   "Invalid request data",
+// 			"details": err.Error(),
+// 		})
+// 		return
+// 	}
 
-	// 解析UUID
-	recipientID, err := uuid.Parse(req.RecipientID)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Invalid recipient ID",
-		})
-		return
-	}
+// 	// 解析UUID
+// 	recipientID, err := uuid.Parse(req.RecipientID)
+// 	if err != nil {
+// 		c.JSON(http.StatusBadRequest, gin.H{
+// 			"error": "Invalid recipient ID",
+// 		})
+// 		return
+// 	}
 
-	stockID, err := uuid.Parse(req.StockID)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Invalid stock ID",
-		})
-		return
-	}
+// 	stockID, err := uuid.Parse(req.StockID)
+// 	if err != nil {
+// 		c.JSON(http.StatusBadRequest, gin.H{
+// 			"error": "Invalid stock ID",
+// 		})
+// 		return
+// 	}
 
-	// 检查是否给自己发送赠送
-	if userID == recipientID {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Cannot send gift to yourself",
-		})
-		return
-	}
+// 	// 检查是否给自己发送赠送
+// 	if userID == recipientID {
+// 		c.JSON(http.StatusBadRequest, gin.H{
+// 			"error": "Cannot send gift to yourself",
+// 		})
+// 		return
+// 	}
 
-	// 发送赠送
-	giftRecord, err := services.GiftService.SendGift(userID, recipientID, stockID, req.Quantity, req.Message)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error":   "Failed to send gift",
-			"details": err.Error(),
-		})
-		return
-	}
+// 	// 发送赠送
+// 	giftRecord, err := services.GiftService.SendGift(userID, recipientID, stockID, req.Quantity, req.Message)
+// 	if err != nil {
+// 		c.JSON(http.StatusBadRequest, gin.H{
+// 			"error":   "Failed to send gift",
+// 			"details": err.Error(),
+// 		})
+// 		return
+// 	}
 
-	// 转换为响应格式
-	response := GiftResponse{
-		ID: giftRecord.ID.String(),
-		Sender: UserPublicInfo{
-			ID:             giftRecord.Sender.ID.String(),
-			Name:           giftRecord.Sender.Name,
-			Avatar:         giftRecord.Sender.Avatar,
-			YoloStockValue: giftRecord.Sender.YoloStockValue,
-		},
-		Recipient: UserPublicInfo{
-			ID:             giftRecord.Recipient.ID.String(),
-			Name:           giftRecord.Recipient.Name,
-			Avatar:         giftRecord.Recipient.Avatar,
-			YoloStockValue: giftRecord.Recipient.YoloStockValue,
-		},
-		Stock: StockInfo{
-			ID:     giftRecord.Stock.ID.String(),
-			Name:   giftRecord.Stock.Name,
-			Symbol: giftRecord.Stock.Symbol,
-			Price:  giftRecord.Stock.Price,
-		},
-		Quantity:  giftRecord.Quantity,
-		Message:   giftRecord.Message,
-		CreatedAt: giftRecord.CreatedAt.Format("2006-01-02T15:04:05Z"),
-	}
+// 	// 转换为响应格式
+// 	response := GiftResponse{
+// 		ID: giftRecord.ID.String(),
+// 		Sender: UserPublicInfo{
+// 			ID:             giftRecord.Sender.ID.String(),
+// 			Name:           giftRecord.Sender.Name,
+// 			Avatar:         giftRecord.Sender.Avatar,
+// 			YoloStockValue: giftRecord.Sender.YoloStockValue,
+// 		},
+// 		Recipient: UserPublicInfo{
+// 			ID:             giftRecord.Recipient.ID.String(),
+// 			Name:           giftRecord.Recipient.Name,
+// 			Avatar:         giftRecord.Recipient.Avatar,
+// 			YoloStockValue: giftRecord.Recipient.YoloStockValue,
+// 		},
+// 		Stock: StockInfo{
+// 			ID:     giftRecord.Stock.ID.String(),
+// 			Name:   giftRecord.Stock.Name,
+// 			Symbol: giftRecord.Stock.Symbol,
+// 			Price:  giftRecord.Stock.Price,
+// 		},
+// 		Quantity:  giftRecord.Quantity,
+// 		Message:   giftRecord.Message,
+// 		CreatedAt: giftRecord.CreatedAt.Format("2006-01-02T15:04:05Z"),
+// 	}
 
-	c.JSON(http.StatusCreated, gin.H{
-		"message": "Gift sent successfully",
-		"gift":    response,
-	})
-}
+// 	c.JSON(http.StatusCreated, gin.H{
+// 		"message": "Gift sent successfully",
+// 		"gift":    response,
+// 	})
+// }
 
-// GetReceivedGifts 获取收到的赠送
-func GetReceivedGifts(c *gin.Context) {
-	userID := utils.GetUserIDFromContext(c)
+// // GetReceivedGifts 获取收到的赠送
+// func GetReceivedGifts(c *gin.Context) {
+// 	userID := utils.GetUserIDFromContext(c)
 
-	// 获取分页参数
-	page := utils.GetPageFromQuery(c)
-	limit := utils.GetLimitFromQuery(c)
+// 	// 获取分页参数
+// 	page := utils.GetPageFromQuery(c)
+// 	limit := utils.GetLimitFromQuery(c)
 
-	gifts, total, err := services.GiftService.GetReceivedGifts(userID, page, limit)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error":   "Failed to get received gifts",
-			"details": err.Error(),
-		})
-		return
-	}
+// 	gifts, total, err := services.GiftService.GetReceivedGifts(userID, page, limit)
+// 	if err != nil {
+// 		c.JSON(http.StatusInternalServerError, gin.H{
+// 			"error":   "Failed to get received gifts",
+// 			"details": err.Error(),
+// 		})
+// 		return
+// 	}
 
-	// 转换为响应格式
-	var giftResponses []GiftResponse
-	for _, gift := range gifts {
-		giftResponses = append(giftResponses, GiftResponse{
-			ID: gift.ID.String(),
-			Sender: UserPublicInfo{
-				ID:             gift.Sender.ID.String(),
-				Name:           gift.Sender.Name,
-				Avatar:         gift.Sender.Avatar,
-				YoloStockValue: gift.Sender.YoloStockValue,
-			},
-			Recipient: UserPublicInfo{
-				ID:             gift.Recipient.ID.String(),
-				Name:           gift.Recipient.Name,
-				Avatar:         gift.Recipient.Avatar,
-				YoloStockValue: gift.Recipient.YoloStockValue,
-			},
-			Stock: StockInfo{
-				ID:     gift.Stock.ID.String(),
-				Name:   gift.Stock.Name,
-				Symbol: gift.Stock.Symbol,
-				Price:  gift.Stock.Price,
-			},
-			Quantity:  gift.Quantity,
-			Message:   gift.Message,
-			CreatedAt: gift.CreatedAt.Format("2006-01-02T15:04:05Z"),
-		})
-	}
+// 	// 转换为响应格式
+// 	var giftResponses []GiftResponse
+// 	for _, gift := range gifts {
+// 		giftResponses = append(giftResponses, GiftResponse{
+// 			ID: gift.ID.String(),
+// 			Sender: UserPublicInfo{
+// 				ID:             gift.Sender.ID.String(),
+// 				Name:           gift.Sender.Name,
+// 				Avatar:         gift.Sender.Avatar,
+// 				YoloStockValue: gift.Sender.YoloStockValue,
+// 			},
+// 			Recipient: UserPublicInfo{
+// 				ID:             gift.Recipient.ID.String(),
+// 				Name:           gift.Recipient.Name,
+// 				Avatar:         gift.Recipient.Avatar,
+// 				YoloStockValue: gift.Recipient.YoloStockValue,
+// 			},
+// 			Stock: StockInfo{
+// 				ID:     gift.Stock.ID.String(),
+// 				Name:   gift.Stock.Name,
+// 				Symbol: gift.Stock.Symbol,
+// 				Price:  gift.Stock.Price,
+// 			},
+// 			Quantity:  gift.Quantity,
+// 			Message:   gift.Message,
+// 			CreatedAt: gift.CreatedAt.Format("2006-01-02T15:04:05Z"),
+// 		})
+// 	}
 
-	// 计算总页数
-	totalPages := int((total + int64(limit) - 1) / int64(limit))
+// 	// 计算总页数
+// 	totalPages := int((total + int64(limit) - 1) / int64(limit))
 
-	response := GiftsResponse{
-		Gifts: giftResponses,
-		PageInfo: PageInfo{
-			CurrentPage: page,
-			TotalPages:  totalPages,
-			TotalPosts:  total,
-		},
-	}
+// 	response := GiftsResponse{
+// 		Gifts: giftResponses,
+// 		PageInfo: PageInfo{
+// 			CurrentPage: page,
+// 			TotalPages:  totalPages,
+// 			TotalPosts:  total,
+// 		},
+// 	}
 
-	c.JSON(http.StatusOK, response)
-}
+// 	c.JSON(http.StatusOK, response)
+// }
 
-// GetSentGifts 获取发送的赠送
-func GetSentGifts(c *gin.Context) {
-	userID := utils.GetUserIDFromContext(c)
+// // GetSentGifts 获取发送的赠送
+// func GetSentGifts(c *gin.Context) {
+// 	userID := utils.GetUserIDFromContext(c)
 
-	// 获取分页参数
-	page := utils.GetPageFromQuery(c)
-	limit := utils.GetLimitFromQuery(c)
+// 	// 获取分页参数
+// 	page := utils.GetPageFromQuery(c)
+// 	limit := utils.GetLimitFromQuery(c)
 
-	gifts, total, err := services.GiftService.GetSentGifts(userID, page, limit)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error":   "Failed to get sent gifts",
-			"details": err.Error(),
-		})
-		return
-	}
+// 	gifts, total, err := services.GiftService.GetSentGifts(userID, page, limit)
+// 	if err != nil {
+// 		c.JSON(http.StatusInternalServerError, gin.H{
+// 			"error":   "Failed to get sent gifts",
+// 			"details": err.Error(),
+// 		})
+// 		return
+// 	}
 
-	// 转换为响应格式
-	var giftResponses []GiftResponse
-	for _, gift := range gifts {
-		giftResponses = append(giftResponses, GiftResponse{
-			ID: gift.ID.String(),
-			Sender: UserPublicInfo{
-				ID:             gift.Sender.ID.String(),
-				Name:           gift.Sender.Name,
-				Avatar:         gift.Sender.Avatar,
-				YoloStockValue: gift.Sender.YoloStockValue,
-			},
-			Recipient: UserPublicInfo{
-				ID:             gift.Recipient.ID.String(),
-				Name:           gift.Recipient.Name,
-				Avatar:         gift.Recipient.Avatar,
-				YoloStockValue: gift.Recipient.YoloStockValue,
-			},
-			Stock: StockInfo{
-				ID:     gift.Stock.ID.String(),
-				Name:   gift.Stock.Name,
-				Symbol: gift.Stock.Symbol,
-				Price:  gift.Stock.Price,
-			},
-			Quantity:  gift.Quantity,
-			Message:   gift.Message,
-			CreatedAt: gift.CreatedAt.Format("2006-01-02T15:04:05Z"),
-		})
-	}
+// 	// 转换为响应格式
+// 	var giftResponses []GiftResponse
+// 	for _, gift := range gifts {
+// 		giftResponses = append(giftResponses, GiftResponse{
+// 			ID: gift.ID.String(),
+// 			Sender: UserPublicInfo{
+// 				ID:             gift.Sender.ID.String(),
+// 				Name:           gift.Sender.Name,
+// 				Avatar:         gift.Sender.Avatar,
+// 				YoloStockValue: gift.Sender.YoloStockValue,
+// 			},
+// 			Recipient: UserPublicInfo{
+// 				ID:             gift.Recipient.ID.String(),
+// 				Name:           gift.Recipient.Name,
+// 				Avatar:         gift.Recipient.Avatar,
+// 				YoloStockValue: gift.Recipient.YoloStockValue,
+// 			},
+// 			Stock: StockInfo{
+// 				ID:     gift.Stock.ID.String(),
+// 				Name:   gift.Stock.Name,
+// 				Symbol: gift.Stock.Symbol,
+// 				Price:  gift.Stock.Price,
+// 			},
+// 			Quantity:  gift.Quantity,
+// 			Message:   gift.Message,
+// 			CreatedAt: gift.CreatedAt.Format("2006-01-02T15:04:05Z"),
+// 		})
+// 	}
 
-	// 计算总页数
-	totalPages := int((total + int64(limit) - 1) / int64(limit))
+// 	// 计算总页数
+// 	totalPages := int((total + int64(limit) - 1) / int64(limit))
 
-	response := GiftsResponse{
-		Gifts: giftResponses,
-		PageInfo: PageInfo{
-			CurrentPage: page,
-			TotalPages:  totalPages,
-			TotalPosts:  total,
-		},
-	}
+// 	response := GiftsResponse{
+// 		Gifts: giftResponses,
+// 		PageInfo: PageInfo{
+// 			CurrentPage: page,
+// 			TotalPages:  totalPages,
+// 			TotalPosts:  total,
+// 		},
+// 	}
 
-	c.JSON(http.StatusOK, response)
-}
+// 	c.JSON(http.StatusOK, response)
+// }
 
-// GetUserTrades 获取用户交易记录
-func GetUserTrades(c *gin.Context) {
-	userID := utils.GetUserIDFromContext(c)
+// // GetUserTrades 获取用户交易记录
+// func GetUserTrades(c *gin.Context) {
+// 	userID := utils.GetUserIDFromContext(c)
 
-	// 获取查询参数
-	page := utils.GetPageFromQuery(c)
-	limit := utils.GetLimitFromQuery(c)
+// 	// 获取查询参数
+// 	page := utils.GetPageFromQuery(c)
+// 	limit := utils.GetLimitFromQuery(c)
 
-	trades, total, err := services.TradeService.GetUserTrades(userID, page, limit)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error":   "Failed to get trades",
-			"details": err.Error(),
-		})
-		return
-	}
+// 	trades, total, err := services.TradeService.GetUserTrades(userID, page, limit)
+// 	if err != nil {
+// 		c.JSON(http.StatusInternalServerError, gin.H{
+// 			"error":   "Failed to get trades",
+// 			"details": err.Error(),
+// 		})
+// 		return
+// 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"trades": trades,
-		"pagination": gin.H{
-			"page":  page,
-			"limit": limit,
-			"total": total,
-		},
-	})
-}
+// 	c.JSON(http.StatusOK, gin.H{
+// 		"trades": trades,
+// 		"pagination": gin.H{
+// 			"page":  page,
+// 			"limit": limit,
+// 			"total": total,
+// 		},
+// 	})
+// }
 
 // GetUserPublicInfo 根据用户名获取用户公开信息 (GET /users/:username)
 func GetUserPublicInfo(c *gin.Context) {
@@ -501,7 +500,7 @@ func GetUserPublicInfo(c *gin.Context) {
 		ID:             user.ID.String(),
 		Name:           user.Name,
 		Avatar:         user.Avatar,
-		YoloStockValue: user.YoloStockValue,
+		// YoloStockValue: user.YoloStockValue,
 	}
 
 	c.JSON(http.StatusOK, response)

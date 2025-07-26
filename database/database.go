@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 	"yolo/models"
 
 	"gorm.io/driver/postgres"
@@ -77,8 +78,8 @@ func initPostgresDatabase() error {
 		sslmode = "disable"
 	}
 
-	// 构建数据库连接字符串
-	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=%s TimeZone=Asia/Shanghai",
+	// 构建数据库连接字符串 - 移除时区设置
+	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=%s",
 		host, user, password, dbname, port, sslmode)
 
 	// 连接数据库
@@ -105,13 +106,43 @@ func initPostgresDatabase() error {
 	return nil
 }
 
-// AutoMigrate 自动迁移数据库表
+// AutoMigrate 自动迁移数据库表 - 仅迁移用户管理相关表
 func AutoMigrate() error {
 	if DB == nil {
 		return fmt.Errorf("database not initialized")
 	}
 
-	// 自动迁移所有模型
+	// 仅迁移用户和帖子模型
+	err := DB.AutoMigrate(
+		&models.User{},
+		&models.Post{},
+	)
+
+	if err != nil {
+		// 检查是否是约束相关的错误，如果是则忽略
+		errStr := err.Error()
+		if strings.Contains(errStr, "constraint") && strings.Contains(errStr, "does not exist") {
+			log.Printf("Warning: Constraint error ignored during migration: %v", err)
+			log.Println("Database migration completed with warnings")
+			return nil
+		} else {
+			return fmt.Errorf("failed to migrate database: %w", err)
+		}
+	}
+
+	log.Println("Database migration completed successfully - User Management Only")
+	return nil
+}
+
+// ==================== 以下功能已停用 ====================
+// 如果将来需要恢复交易功能，可以取消注释以下代码：
+/*
+// AutoMigrateAll 迁移所有表（包括交易相关）
+func AutoMigrateAll() error {
+	if DB == nil {
+		return fmt.Errorf("database not initialized")
+	}
+
 	err := DB.AutoMigrate(
 		&models.User{},
 		&models.Post{},
@@ -123,12 +154,20 @@ func AutoMigrate() error {
 	)
 
 	if err != nil {
-		return fmt.Errorf("failed to migrate database: %w", err)
+		errStr := err.Error()
+		if strings.Contains(errStr, "constraint") && strings.Contains(errStr, "does not exist") {
+			log.Printf("Warning: Constraint error ignored during migration: %v", err)
+			log.Println("Database migration completed with warnings")
+			return nil
+		} else {
+			return fmt.Errorf("failed to migrate database: %w", err)
+		}
 	}
 
-	log.Println("Database migration completed successfully")
+	log.Println("Full database migration completed successfully")
 	return nil
 }
+*/
 
 // GetDB 获取数据库实例
 func GetDB() *gorm.DB {
