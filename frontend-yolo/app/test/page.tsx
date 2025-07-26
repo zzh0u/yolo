@@ -3,6 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
+import { useBalance } from "wagmi";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -25,7 +26,13 @@ const formSchema = z.object({
   }),
 });
 
+const addressToCheck = "0x1DfF7BB970DebA1db193992a4b90aE2eC8540037";
+
 export default function TestPage() {
+  const { data: balance, isLoading: isBalanceLoading } = useBalance({
+    address: addressToCheck,
+  });
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -40,6 +47,20 @@ export default function TestPage() {
 
   return (
     <div className="w-full max-w-2xl mx-auto text-black h-screen flex flex-col px-12 py-12">
+      <div className="mb-8">
+        <h2 className="text-xl font-bold mb-4">钱包信息</h2>
+        <div>
+          <p>查询地址: {addressToCheck}</p>
+          {isBalanceLoading ? (
+            <p>正在查询余额...</p>
+          ) : (
+            <p>
+              余额: {balance?.formatted} {balance?.symbol}
+            </p>
+          )}
+        </div>
+      </div>
+
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
           <FormField
