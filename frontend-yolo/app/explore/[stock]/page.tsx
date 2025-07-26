@@ -108,7 +108,10 @@ export default function ProductPage() {
                             price={stockData.current_price?.toFixed(4) || '0.0000'}
                             change={formatPercentage(stockData.daily_change || 0)}
                         />
-                        <TradingViewChart onTimeClick={setSelectedDate} />
+                        <TradingViewChart 
+                            stockId={stockData.id}
+                            onTimeClick={setSelectedDate} 
+                        />
                          <StatsBar
                              chain="YOLO"
                              marketCap={`$${formatNumber(stockData.market_cap || 0)}`}

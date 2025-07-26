@@ -577,6 +577,183 @@ export class StockService {
     }
   }
 
+  // 获取股票的图表数据（支持不同时间范围）
+  static async getStockChartData(stockId: string, timeRange: '1D' | '1W' | '1M' | '3M' = '3M'): Promise<{ time: number; value: number }[]> {
+    try {
+      let days: number;
+      let groupByHours = false;
+      
+      switch (timeRange) {
+        case '1D':
+          days = 1;
+          groupByHours = true; // 1天内按小时分组
+          break;
+        case '1W':
+          days = 7;
+          break;
+        case '1M':
+          days = 30;
+          break;
+        case '3M':
+          days = 90;
+          break;
+        default:
+          days = 90;
+      }
+
+      const startDate = new Date();
+      startDate.setDate(startDate.getDate() - days);
+
+      const { data, error } = await supabase
+        .from('transactions')
+        .select('price_per_share, created_at')
+        .eq('stock_id', stockId)
+        .gte('created_at', startDate.toISOString())
+        .order('created_at', { ascending: true });
+
+      if (error && !error.message.includes('relation "transactions" does not exist')) {
+        throw error;
+      }
+
+      if (!data || data.length === 0) {
+        // 如果没有交易数据，返回当前价格的模拟数据
+        return this.generateFallbackChartData(stockId, timeRange);
+      }
+
+      // 处理数据分组
+      const chartData: { time: number; value: number }[] = [];
+      
+      if (groupByHours && timeRange === '1D') {
+        // 按小时分组
+        const hourlyData = new Map<string, { sum: number; count: number }>();
+        
+        data.forEach(transaction => {
+          const date = new Date(transaction.created_at);
+          const hourKey = `${date.getUTCFullYear()}-${date.getUTCMonth()}-${date.getUTCDate()}-${date.getUTCHours()}`;
+          
+          if (!hourlyData.has(hourKey)) {
+            hourlyData.set(hourKey, { sum: 0, count: 0 });
+          }
+          
+          const hourData = hourlyData.get(hourKey)!;
+          hourData.sum += parseFloat(transaction.price_per_share);
+          hourData.count += 1;
+        });
+        
+        // 转换为图表数据
+        hourlyData.forEach((value, key) => {
+          const [year, month, day, hour] = key.split('-').map(Number);
+          const date = new Date(year, month, day, hour);
+          chartData.push({
+            time: Math.floor(date.getTime() / 1000),
+            value: value.sum / value.count
+          });
+        });
+      } else {
+        // 按天分组
+        const dailyData = new Map<string, { sum: number; count: number }>();
+        
+        data.forEach(transaction => {
+          const date = new Date(transaction.created_at);
+          const dayKey = `${date.getUTCFullYear()}-${date.getUTCMonth()}-${date.getUTCDate()}`;
+          
+          if (!dailyData.has(dayKey)) {
+            dailyData.set(dayKey, { sum: 0, count: 0 });
+          }
+          
+          const dayData = dailyData.get(dayKey)!;
+          dayData.sum += parseFloat(transaction.price_per_share);
+          dayData.count += 1;
+        });
+        
+        // 转换为图表数据
+        dailyData.forEach((value, key) => {
+          const [year, month, day] = key.split('-').map(Number);
+          const date = new Date(year, month, day);
+          date.setUTCHours(0, 0, 0, 0);
+          chartData.push({
+            time: Math.floor(date.getTime() / 1000),
+            value: value.sum / value.count
+          });
+        });
+      }
+
+      return chartData.sort((a, b) => a.time - b.time);
+    } catch (error: any) {
+      if (!error.message?.includes('relation "transactions" does not exist')) {
+        console.error('Error fetching chart data:', error);
+      }
+      return this.generateFallbackChartData(stockId, timeRange);
+    }
+  }
+
+  // 生成备用图表数据（当没有交易数据时）
+  private static async generateFallbackChartData(stockId: string, timeRange: '1D' | '1W' | '1M' | '3M'): Promise<{ time: number; value: number }[]> {
+    try {
+      // 获取股票当前价格
+      const stock = await supabase
+        .from('stock')
+        .select('price')
+        .eq('id', stockId)
+        .single();
+
+      const currentPrice = stock.data?.price || 1;
+      
+      let days: number;
+      let pointsCount: number;
+      
+      switch (timeRange) {
+        case '1D':
+          days = 1;
+          pointsCount = 24; // 24小时
+          break;
+        case '1W':
+          days = 7;
+          pointsCount = 7; // 7天
+          break;
+        case '1M':
+          days = 30;
+          pointsCount = 30; // 30天
+          break;
+        case '3M':
+          days = 90;
+          pointsCount = 90; // 90天
+          break;
+        default:
+          days = 90;
+          pointsCount = 90;
+      }
+
+      const data: { time: number; value: number }[] = [];
+      const now = new Date();
+      
+      for (let i = 0; i < pointsCount; i++) {
+        const date = new Date(now);
+        
+        if (timeRange === '1D') {
+          date.setUTCHours(date.getUTCHours() - (pointsCount - 1 - i));
+        } else {
+          date.setUTCDate(date.getUTCDate() - (pointsCount - 1 - i));
+          date.setUTCHours(0, 0, 0, 0);
+        }
+        
+        // 生成轻微波动的价格数据
+        const variation = (Math.random() - 0.5) * 0.1; // ±5%的波动
+        const price = currentPrice * (1 + variation);
+        
+        data.push({
+          time: Math.floor(date.getTime() / 1000),
+          value: Math.max(0.01, price) // 确保价格不为负
+        });
+      }
+
+      return data;
+    } catch (error) {
+      console.error('Error generating fallback chart data:', error);
+      return [];
+    }
+  }
+
   // 获取股票的实际持有人数
   static async getStockOwnersCount(stockId: string): Promise<number> {
     try {

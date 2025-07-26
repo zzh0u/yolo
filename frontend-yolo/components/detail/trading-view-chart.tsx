@@ -2,33 +2,10 @@
 
 import { AreaSeries, createChart, ColorType, CrosshairMode, LineStyle, IChartApi, ISeriesApi, UTCTimestamp, MouseEventParams } from 'lightweight-charts';
 import React, { useEffect, useRef, useState } from 'react';
-
-const generateData = (numPoints: number, type: 'day' | 'minute') => {
-    const data = [];
-    let value = 100;
-    const now = new Date();
-    
-    for (let i = 0; i < numPoints; i++) {
-        const date = new Date(now);
-        if (type === 'day') {
-            date.setUTCDate(date.getUTCDate() - (numPoints - 1 - i));
-            date.setUTCHours(0, 0, 0, 0);
-        } else {
-            date.setUTCMinutes(date.getUTCMinutes() - (numPoints - 1 - i));
-        }
-        
-        const time = (date.getTime() / 1000) as UTCTimestamp;
-        value += (Math.random() - 0.48) * (type === 'day' ? 2 : 0.1);
-        if (value < 10) value = 10;
-        data.push({ time, value: parseFloat(value.toFixed(2)) });
-    }
-    return data;
-};
-
-const dailyData = generateData(365 * 2, 'day'); // 2 years of daily data
-const minuteData = generateData(24 * 60, 'minute'); // 24 hours of minute data
+import { StockService } from '@/service/stockService';
 
 type TradingViewChartProps = {
+  stockId?: string; // 添加stockId参数
   onTimeClick?: (time: string | null) => void;
   colors?: {
     backgroundColor?: string;
@@ -41,6 +18,7 @@ type TradingViewChartProps = {
 
 export const TradingViewChart = (props: TradingViewChartProps) => {
     const {
+        stockId,
         onTimeClick,
         colors: {
             backgroundColor = 'transparent',
@@ -55,7 +33,29 @@ export const TradingViewChart = (props: TradingViewChartProps) => {
     const chartRef = useRef<IChartApi | null>(null);
     const seriesRef = useRef<ISeriesApi<'Area'> | null>(null);
     const [timeRange, setTimeRange] = useState('3M');
+    const [chartData, setChartData] = useState<{ time: number; value: number }[]>([]);
+    const [loading, setLoading] = useState(false);
 
+    // 加载图表数据
+    const loadChartData = async (range: string) => {
+        if (!stockId) return;
+        
+        setLoading(true);
+        try {
+            const data = await StockService.getStockChartData(
+                stockId, 
+                range as '1D' | '1W' | '1M' | '3M'
+            );
+            setChartData(data);
+        } catch (error) {
+            console.error('Error loading chart data:', error);
+            setChartData([]);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // 初始化图表
     useEffect(() => {
         if (!chartContainerRef.current) return;
 
@@ -115,6 +115,7 @@ export const TradingViewChart = (props: TradingViewChartProps) => {
         };
     }, [backgroundColor, lineColor, textColor, areaTopColor, areaBottomColor]);
 
+    // 处理点击事件
     useEffect(() => {
       if (!chartRef.current || !onTimeClick) return;
 
@@ -135,34 +136,26 @@ export const TradingViewChart = (props: TradingViewChartProps) => {
       };
     }, [onTimeClick]);
 
+    // 当stockId或timeRange变化时加载数据
     useEffect(() => {
-        if (!seriesRef.current) return;
-
-        let data;
-        switch (timeRange) {
-            case '1D':
-                data = minuteData;
-                break;
-            default:
-                const now = new Date();
-                now.setUTCHours(0,0,0,0);
-                const startDate = new Date(now);
-                
-                if (timeRange === '1W') {
-                    startDate.setDate(now.getDate() - 7);
-                } else if (timeRange === '1M') {
-                    startDate.setMonth(now.getMonth() - 1);
-                } else if (timeRange === '3M') {
-                    startDate.setMonth(now.getMonth() - 3);
-                }
-
-                const startTimeStamp = startDate.getTime() / 1000;
-                data = dailyData.filter(d => d.time >= startTimeStamp);
-                break;
+        if (stockId) {
+            loadChartData(timeRange);
         }
+    }, [stockId, timeRange]);
 
-        seriesRef.current.setData(data);
+    // 更新图表数据
+    useEffect(() => {
+        if (!seriesRef.current || chartData.length === 0) return;
 
+        // 转换数据格式为lightweight-charts需要的格式
+        const formattedData = chartData.map(item => ({
+            time: item.time as UTCTimestamp,
+            value: item.value
+        }));
+
+        seriesRef.current.setData(formattedData);
+
+        // 设置时间轴格式
         const timeScaleOptions: any = {
             timeVisible: true,
             secondsVisible: timeRange === '1D',
@@ -180,12 +173,13 @@ export const TradingViewChart = (props: TradingViewChartProps) => {
         });
 
         chartRef.current?.timeScale().fitContent();
-    }, [timeRange]);
+    }, [chartData, timeRange]);
 
     const TimeRangeButton = ({ range, children }: { range: string, children: React.ReactNode }) => (
         <button
             onClick={() => setTimeRange(range)}
-            className={`px-3 py-1 text-sm rounded-md transition-colors ${
+            disabled={loading}
+            className={`px-3 py-1 text-sm rounded-md transition-colors disabled:opacity-50 ${
                 timeRange === range
                     ? 'bg-white/20 text-white'
                     : 'bg-transparent text-zinc-400 hover:bg-white/10 hover:text-white'
@@ -205,8 +199,19 @@ export const TradingViewChart = (props: TradingViewChartProps) => {
             </div>
             <div
                 ref={chartContainerRef}
-                className="rounded-xl bg-black/30 backdrop-blur-sm p-4"
-            />
+                className="rounded-xl bg-black/30 backdrop-blur-sm p-4 relative"
+            >
+                {loading && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/20 rounded-xl">
+                        <div className="text-white/60 text-sm">加载图表数据中...</div>
+                    </div>
+                )}
+                {!stockId && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/20 rounded-xl">
+                        <div className="text-white/60 text-sm">请选择股票查看图表</div>
+                    </div>
+                )}
+            </div>
         </div>
     );
 };
