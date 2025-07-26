@@ -4,10 +4,12 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import GlassSurface from "@/components/react-bits/glass-surface";
 import { PlusCircle, Compass } from "lucide-react";
-import { Avatar, AvatarImage, AvatarFallback } from "./ui/avatar";
+import AvatarWithFallback from "@/components/ui/avatar-with-fallback";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function Navbar() {
   const pathname = usePathname();
+  const { user } = useAuth();
   
   const isActive = (path: string) => {
     return pathname === path ? "font-bold" : "";
@@ -39,14 +41,16 @@ export default function Navbar() {
             Discover
           </Link>
           <Link href="/profile" className={`text-white hover:text-gray-300 transition-colors flex items-center gap-1 ${isActive("/me")}`}>
-            <Avatar className="size-6">
-              <AvatarImage src="/img/elon.png" />
-              <AvatarFallback>U</AvatarFallback>
-            </Avatar>
+            <AvatarWithFallback
+              src={user?.user_metadata?.avatar_url}
+              name={user?.user_metadata?.full_name || user?.email || 'User'}
+              alt="User avatar"
+              size={24}
+            />
             Me
           </Link>
         </div>
         </div>
         </GlassSurface>
   );
-} 
+}
