@@ -14,6 +14,10 @@ import { Button } from "@/components/ui/button";
 export default function DiscoverPage() {
   const { user, loading, signOut } = useAuth()
 
+  // 添加调试信息
+  console.log('DiscoverPage - loading:', loading, 'user:', user)
+
+  // 如果正在加载，显示加载状态
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-[#141416]">
@@ -28,6 +32,14 @@ export default function DiscoverPage() {
     } catch (error) {
       console.error('Error signing out:', error)
     }
+  }
+
+  // 获取显示的用户信息
+  const getUserDisplayInfo = () => {
+    if (user?.email) {
+      return user.email
+    }
+    return "加载中..."
   }
 
   return (
@@ -48,12 +60,12 @@ export default function DiscoverPage() {
       {/* 右侧 */}
       <div className="flex-1 flex flex-col p-6 py-12">
         <header className="flex justify-between items-center mb-6">
-          <div className="flex items-center gap-4">
+          <div className="flex items-center justify-between gap-4 w-full">
             {/* 搜索框 */}
-            <div className="relative">
+            {/* <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={20}/>
               <Input placeholder="Search" className="w-80 pl-10 bg-transparent border-gray-700 focus:border-blue-500"/>
-            </div>
+            </div> */}
 
             {/* 榜单选择 */}
             <Tabs defaultValue="top">
@@ -65,14 +77,16 @@ export default function DiscoverPage() {
             </Tabs>
 
             {/* 用户信息和余额 */}
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-4" >
               <div className="flex items-center border border-gray-700 rounded-full px-4 py-2">
                 <span className="text-gray-500">My Balance: 8000 YOLO</span>
               </div>
               
               {/* 用户邮箱和登出按钮 */}
               <div className="flex items-center gap-2 border border-gray-700 rounded-full px-4 py-2">
-                <span className="text-gray-400 text-sm">{user?.email}</span>
+                <Link href="/profile" className="text-gray-300 text-sm hover:text-white">
+                  {getUserDisplayInfo()}
+                </Link>
                 <Button
                   onClick={handleSignOut}
                   variant="ghost"
