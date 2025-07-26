@@ -38,6 +38,7 @@ export default function CreatePage() {
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [symbolExists, setSymbolExists] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
 
   // 检查用户登录状态
   useEffect(() => {
@@ -108,8 +109,13 @@ export default function CreatePage() {
         price: formData.price
       }, user.id);
 
-      // 跳转到探索页面
-      router.push('/explore');
+      // 显示成功提示
+      setShowSuccess(true);
+      
+      // 2秒后跳转到探索页面
+      setTimeout(() => {
+        router.push('/explore');
+      }, 2000);
     } catch (error) {
       console.error('创建失败:', error);
       setError(error instanceof Error ? error.message : '创建失败，请重试');
@@ -332,13 +338,32 @@ export default function CreatePage() {
                     </div>
                   </div>
 
+                  {showSuccess && (
+                    <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-6 text-center">
+                      <div className="flex items-center justify-center mb-4">
+                        <div className="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center">
+                          <svg className="w-8 h-8 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                        </div>
+                      </div>
+                      <h3 className="text-green-400 font-bold text-xl mb-2">创建成功！</h3>
+                      <p className="text-green-300 mb-4">
+                        恭喜！你的股票 <span className="font-semibold">{formData.symbol}</span> 已成功创建
+                      </p>
+                      <p className="text-sm text-gray-400">
+                        正在跳转到探索页面...
+                      </p>
+                    </div>
+                  )}
+
                   {error && (
                     <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-4">
                       <p className="text-red-400">{error}</p>
                     </div>
                   )}
 
-                  {isCreating && (
+                  {isCreating && !showSuccess && (
                     <div className="text-center">
                       <p className="text-blue-400">正在创建中...</p>
                     </div>
