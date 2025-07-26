@@ -6,59 +6,10 @@ import { login, signup } from '@/app/login/action'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 
-// 极简黑白风格弹窗组件
-function SuccessModal({ isOpen, onConfirm }: { isOpen: boolean; onConfirm: () => void }) {
-  if (!isOpen) return null
-
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white w-80 p-8 shadow-2xl">
-        <div className="text-center">
-          {/* 成功图标 */}
-          <div className="w-16 h-16 mx-auto mb-6 bg-black rounded-full flex items-center justify-center">
-            <svg 
-              className="w-8 h-8 text-white" 
-              fill="none" 
-              stroke="currentColor" 
-              viewBox="0 0 24 24"
-            >
-              <path 
-                strokeLinecap="round" 
-                strokeLinejoin="round" 
-                strokeWidth={2} 
-                d="M5 13l4 4L19 7" 
-              />
-            </svg>
-          </div>
-          
-          {/* 标题 */}
-          <h2 className="text-xl font-light text-black mb-2">
-            Login Successful
-          </h2>
-          
-          {/* 描述 */}
-          <p className="text-gray-500 text-sm font-light mb-8">
-            Welcome back! You will be redirected to explore.
-          </p>
-          
-          {/* 确认按钮 */}
-          <Button
-            onClick={onConfirm}
-            className="w-full h-12 bg-black hover:bg-gray-800 text-white font-light text-base rounded-none border-0 transition-colors duration-300"
-          >
-            Continue
-          </Button>
-        </div>
-      </div>
-    </div>
-  )
-}
-
 export default function LoginPage() {
   const [isLogin, setIsLogin] = useState(true)
   const [isLoading, setIsLoading] = useState(false)
   const [showSuccessMessage, setShowSuccessMessage] = useState(false)
-  const [showSuccessModal, setShowSuccessModal] = useState(false)
   const [error, setError] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -91,23 +42,16 @@ export default function LoginPage() {
     
     try {
       if (isLogin) {
-        const result = await login(formData)
-        if (result?.success) {
-          setShowSuccessModal(true)
-        }
+        await login(formData)
+        // 登录成功后会自动重定向，不需要额外处理
       } else {
         await signup(formData)
+        // 注册成功后会重定向到登录页面
       }
     } catch (err: any) {
       setError(err.message || 'An error occurred')
-    } finally {
       setIsLoading(false)
     }
-  }
-
-  const handleSuccessConfirm = () => {
-    setShowSuccessModal(false)
-    router.push('/explore')
   }
 
   const handleModeSwitch = () => {
@@ -225,12 +169,6 @@ export default function LoginPage() {
           </div>
         </div>
       </div>
-
-      {/* Success Modal */}
-      <SuccessModal 
-        isOpen={showSuccessModal} 
-        onConfirm={handleSuccessConfirm}
-      />
     </>
   )
 }

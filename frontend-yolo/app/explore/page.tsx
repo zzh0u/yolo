@@ -3,13 +3,33 @@ import { CollectionTable } from "@/components/explore/collection-table";
 import Timeline from "@/components/explore/timeline";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Search, Home, PlusCircle, User } from "lucide-react";
+import { Search, Home, PlusCircle, User, LogOut } from "lucide-react";
 import GlassSurface from "@/components/react-bits/glass-surface";
 import TextPressure from "@/components/react-bits/text-pressure";
 import Link from "next/link";
+import { useAuth } from "@/contexts/AuthContext";
+import { Button } from "@/components/ui/button";
 
 
 export default function DiscoverPage() {
+  const { user, loading, signOut } = useAuth()
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-[#141416]">
+        <div className="text-gray-300">Loading...</div>
+      </div>
+    )
+  }
+
+  const handleSignOut = async () => {
+    try {
+      await signOut()
+    } catch (error) {
+      console.error('Error signing out:', error)
+    }
+  }
+
   return (
     <div className="flex flex-col h-auto w-screen bg-[#141416] text-gray-300">
       <div className="w-full h-42 flex items-center justify-center px-24">
@@ -44,9 +64,24 @@ export default function DiscoverPage() {
               </TabsList>
             </Tabs>
 
-            {/* 用户余额 */}
-            <div className="flex items-center w-full justify-end border border-gray-700 rounded-full px-4 py-2">
-              <span className="text-gray-500">My Balance: 8000 YOLO</span>
+            {/* 用户信息和余额 */}
+            <div className="flex items-center gap-4">
+              <div className="flex items-center border border-gray-700 rounded-full px-4 py-2">
+                <span className="text-gray-500">My Balance: 8000 YOLO</span>
+              </div>
+              
+              {/* 用户邮箱和登出按钮 */}
+              <div className="flex items-center gap-2 border border-gray-700 rounded-full px-4 py-2">
+                <span className="text-gray-400 text-sm">{user?.email}</span>
+                <Button
+                  onClick={handleSignOut}
+                  variant="ghost"
+                  size="sm"
+                  className="text-gray-400 hover:text-white p-1 h-auto"
+                >
+                  <LogOut size={16} />
+                </Button>
+              </div>
             </div>
           </div>
         </header>
