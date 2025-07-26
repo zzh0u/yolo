@@ -25,8 +25,7 @@ export default function CreatePage() {
     symbol: '',
     story: '',
     supply: 1000,
-    price: 0.1,
-    image: undefined
+    price: 0.1
   });
 
   // 用户余额信息
@@ -39,7 +38,6 @@ export default function CreatePage() {
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [symbolExists, setSymbolExists] = useState(false);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
 
   // 检查用户登录状态
   useEffect(() => {
@@ -71,37 +69,11 @@ export default function CreatePage() {
     }
   };
 
-  // 处理图片选择
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      // 验证文件类型
-      if (!file.type.startsWith('image/')) {
-        setError('请选择图片文件');
-        return;
-      }
-      
-      // 验证文件大小 (5MB)
-      if (file.size > 5 * 1024 * 1024) {
-        setError('图片大小不能超过 5MB');
-        return;
-      }
-
-      setFormData(prev => ({ ...prev, image: file }));
-      
-      // 生成预览
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        setImagePreview(e.target?.result as string);
-      };
-      reader.readAsDataURL(file);
-      setError(null);
-    }
-  };
-
-  // 计算总投资金额
-  const totalInvestment = formData.supply * formData.price;
-  const investmentPercentage = (totalInvestment / userBalance.balance) * 100;
+  // 计算投资相关数据
+  const totalStockValue = formData.price * formData.supply; // 股票总价值
+  const userShares = Math.floor(formData.supply * 0.35); // 用户获得35%股份
+  const actualInvestment = formData.price * userShares; // 用户实际支付金额
+  const investmentPercentage = (actualInvestment / userBalance.balance) * 100;
 
   // 表单验证
   const validateStep1 = () => {
@@ -111,10 +83,10 @@ export default function CreatePage() {
   };
 
   const validateStep2 = () => {
-    return formData.supply > 0 && 
-           formData.price > 0 && 
-           totalInvestment <= userBalance.maxInvestment;
-  };
+      return formData.supply > 0 && 
+            formData.price > 0 && 
+            actualInvestment <= userBalance.balance; // 只检查余额是否足够
+    };
 
   // 处理创建
   const handleCreate = async () => {
@@ -124,37 +96,17 @@ export default function CreatePage() {
     setError(null);
 
     try {
-      // 验证投资金额
-      const validation = await StockService.validateInvestment(user.id, formData.price, formData.supply);
-      if (!validation.valid) {
-        setError(validation.message || '投资验证失败');
-        return;
-      }
-
-      let imageUrl = '';
-      
-      // 上传图片或生成默认头像
-      if (formData.image) {
-        try {
-          imageUrl = await StockService.uploadImage(formData.image, formData.symbol);
-        } catch (uploadError) {
-          console.warn('图片上传失败，使用默认头像:', uploadError);
-          imageUrl = StockService.generateDefaultAvatar(formData.name);
-        }
-      } else {
-        imageUrl = StockService.generateDefaultAvatar(formData.name);
-      }
+      // 使用默认头像
+      const imageUrl = StockService.generateDefaultAvatar(formData.name);
 
       // 创建股票
-      const newStock = await StockService.createStock({
+      await StockService.createStock({
         name: formData.name,
         symbol: formData.symbol,
-        image: imageUrl,
+        image_url: imageUrl,
         supply: formData.supply,
         price: formData.price
       }, user.id);
-
-      console.log('股票创建成功:', newStock);
 
       // 跳转到探索页面
       router.push('/explore');
@@ -299,62 +251,44 @@ export default function CreatePage() {
                     <h3 className="text-white font-medium mb-3">投资计算</h3>
                     <div className="space-y-2 text-sm">
                       <div className="flex justify-between">
-                        <span className="text-gray-400">总投资金额：</span>
-                        <span className="text-white">{totalInvestment.toLocaleString()} YOLO</span>
+                        <span className="text-gray-400">股票总价值：</span>
+                        <span className="text-white">{totalStockValue.toLocaleString()} YOLO</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">你将获得：</span>
+                        <span className="text-white">{userShares.toLocaleString()} 股 (35%)</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">实际支付：</span>
+                        <span className="text-white">{actualInvestment.toLocaleString()} YOLO</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-400">占余额比例：</span>
-                        <span className={investmentPercentage > 20 ? "text-red-400" : "text-green-400"}>
-                          {investmentPercentage.toFixed(1)}%
-                        </span>
+                        <span className="text-white">{investmentPercentage.toFixed(1)}%</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-400">剩余余额：</span>
-                        <span className="text-white">{(userBalance.balance - totalInvestment).toLocaleString()} YOLO</span>
+                        <span className="text-white">{(userBalance.balance - actualInvestment).toLocaleString()} YOLO</span>
                       </div>
                     </div>
                   </div>
 
                   {!validateStep2() && (
-                    <p className="text-red-400 text-sm">
-                      {totalInvestment > userBalance.maxInvestment 
-                        ? `投资金额不能超过 ${userBalance.maxInvestment.toLocaleString()} YOLO (20%)`
-                        : '请设置有效的发行量和单价'
-                      }
-                    </p>
-                  )}
+                      <p className="text-red-400 text-sm">
+                        {actualInvestment > userBalance.balance 
+                          ? `余额不足。需要 ${actualInvestment.toLocaleString()} YOLO，当前余额 ${userBalance.balance.toLocaleString()} YOLO`
+                          : '请设置有效的发行量和单价'
+                        }
+                      </p>
+                    )}
                 </div>
               </Step>
 
-              {/* Step 3: 图片确认 */}
+              {/* Step 3: 完成创建 */}
               <Step>
                 <h2 className="text-2xl font-extrabold mb-6">3. 完成创建</h2>
                 
                 <div className="space-y-6">
-                  {/* 图片上传 */}
-                  <div>
-                    <Label htmlFor="image" className="text-white mb-2 block">项目图片 (可选)</Label>
-                    <input
-                      id="image"
-                      type="file"
-                      accept="image/*"
-                      onChange={handleImageChange}
-                      className="w-full px-3 py-2 border rounded-md bg-background text-foreground file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:bg-primary file:text-primary-foreground"
-                    />
-                    <p className="text-sm text-gray-400 mt-1">支持 JPG、PNG 格式，最大 5MB</p>
-                  </div>
-
-                  {/* 图片预览 */}
-                  {imagePreview && (
-                    <div className="flex justify-center">
-                      <img 
-                        src={imagePreview} 
-                        alt="预览" 
-                        className="w-32 h-32 object-cover rounded-lg border"
-                      />
-                    </div>
-                  )}
-
                   {/* 创建摘要 */}
                   <div className="bg-primary/10 border border-primary/20 rounded-lg p-4">
                     <h3 className="text-primary font-medium mb-3">创建摘要</h3>
@@ -376,8 +310,24 @@ export default function CreatePage() {
                         <span className="text-white">{formData.price} YOLO</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-gray-400">总投资：</span>
-                        <span className="text-white">{totalInvestment.toLocaleString()} YOLO</span>
+                        <span className="text-gray-400">股票总价值：</span>
+                        <span className="text-white">{totalStockValue.toLocaleString()} YOLO</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">你将获得：</span>
+                        <span className="text-white">{userShares.toLocaleString()} 股 (35%)</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">实际支付：</span>
+                        <span className="text-white">{actualInvestment.toLocaleString()} YOLO</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">流动性池：</span>
+                        <span className="text-white">{Math.floor(formData.supply * 0.65).toLocaleString()} 股 (65%)</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">项目图片：</span>
+                        <span className="text-white">系统自动生成</span>
                       </div>
                     </div>
                   </div>

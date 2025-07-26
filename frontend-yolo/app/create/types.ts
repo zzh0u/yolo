@@ -4,9 +4,46 @@ export interface Stock {
   user_id: string;
   name: string;
   symbol: string;
-  image: string;
+  image_url: string;
   owners: number;
   supply: number;
+  price: number; // 发行价格（YOLO币）
+  created_at: string;
+}
+
+// 流动性池数据结构
+export interface LiquidityPool {
+  id: string;
+  stock_id: string;
+  creator_id: string;
+  yolo_reserve: number;
+  stock_reserve: number;
+  total_supply: number;
+  k_constant: number;
+  created_at: string;
+}
+
+// 用户持股记录
+export interface UserHolding {
+  id: string;
+  user_id: string;
+  stock_id: string;
+  shares: number;
+  average_price: number;
+  total_investment: number;
+  created_at: string;
+  stock?: Stock; // 关联的股票信息
+}
+
+// 交易记录
+export interface Transaction {
+  id: string;
+  user_id: string;
+  stock_id: string;
+  transaction_type: 'buy' | 'sell' | 'create';
+  shares: number;
+  price_per_share: number;
+  total_amount: number;
   created_at: string;
 }
 
@@ -14,19 +51,18 @@ export interface Stock {
 export interface CreateStockData {
   name: string;
   symbol: string;
-  image?: string;
+  image_url?: string;
   supply: number;
   price: number; // 发行价格（YOLO币）
 }
 
-// 表单数据（包含可选的图片文件）
+// 表单数据（不包含图片文件）
 export interface StockFormData {
   name: string;
   symbol: string;
   story: string;
   supply: number;
   price: number; // 发行价格
-  image?: File;
 }
 
 // 用户YOLO币余额信息
@@ -42,28 +78,7 @@ export enum CreateStep {
   IMAGE_CONFIRM = 3
 }
 
-// Create页面相关的类型定义
-export interface CreateFormData {
-  title: string;
-  description: string;
-  category: string;
-  tags: string[];
-  priority: 'low' | 'medium' | 'high';
-}
-
-export interface CreatePageProps {
-  onSubmit?: (data: CreateFormData) => void;
-  isLoading?: boolean;
-}
-
-export const CATEGORIES = [
-  { value: 'technology', label: '技术' },
-  { value: 'design', label: '设计' },
-  { value: 'business', label: '商业' },
-  { value: 'education', label: '教育' },
-] as const;
-
-
+// CardSwap 组件相关类型
 export interface CardProps extends React.ComponentProps<'div'> {
   children: React.ReactNode;
 }
@@ -80,9 +95,3 @@ export interface CardSwapProps {
   easing?: "linear" | "elastic";
   onCardClick?: (idx: number) => void;
 }
-
-export const PRIORITY_OPTIONS = [
-  { value: 'low', label: '低优先级', color: 'text-green-600' },
-  { value: 'medium', label: '中优先级', color: 'text-yellow-600' },
-  { value: 'high', label: '高优先级', color: 'text-red-600' },
-] as const;

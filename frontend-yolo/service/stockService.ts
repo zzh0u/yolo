@@ -35,8 +35,7 @@ export class StockService {
                 .insert({
                   user_id: userId,
                   balance: 8000.0,
-                  created_at: new Date().toISOString(),
-                  updated_at: new Date().toISOString()
+                  created_at: new Date().toISOString()
                 });
 
               if (insertError && !insertError.message.includes('relation "user_balances" does not exist')) {
@@ -61,7 +60,8 @@ export class StockService {
         }
       }
       
-      const maxInvestment = balance * 0.2; // 最大可投资20%
+      // 移除投资限制，用户可以使用全部余额
+      const maxInvestment = balance; // 可以使用全部余额
       
       return {
         balance,
@@ -73,7 +73,7 @@ export class StockService {
     }
   }
 
-  // 创建新的 stock（包含流动性池创建）
+  // 创建新的 stock
   static async createStock(stockData: CreateStockData, userId: string): Promise<Stock> {
     try {
       this.checkSupabaseConfig();
@@ -85,9 +85,10 @@ export class StockService {
           user_id: userId,
           name: stockData.name,
           symbol: stockData.symbol.toUpperCase(),
-          image: stockData.image || this.generateDefaultAvatar(stockData.name),
+          image_url: this.generateDefaultAvatar(stockData.name),
           owners: 1, // 创建者默认为第一个持有者
           supply: stockData.supply,
+          price: stockData.price
         })
         .select()
         .single();
@@ -97,24 +98,25 @@ export class StockService {
         throw new Error(`创建股票失败: ${stockError.message}`);
       }
 
-      // 创建流动性池记录（如果有相关表的话）
+      // 创建流动性池记录（平台提供65%的流动性）
       try {
         await this.createLiquidityPool(stockData_result.id, stockData.price, stockData.supply, userId);
       } catch (poolError) {
         console.warn('创建流动性池失败，但股票创建成功:', poolError);
       }
 
-      // 创建用户持股记录
+      // 创建用户持股记录（用户获得35%股份）
       try {
         await this.createUserHolding(stockData_result.id, userId, stockData.supply, stockData.price);
       } catch (holdingError) {
         console.warn('创建持股记录失败，但股票创建成功:', holdingError);
       }
 
-      // 扣除用户YOLO币（投资金额）
+      // 扣除用户YOLO币（只需支付35%股份对应的金额）
       try {
-        const investmentAmount = stockData.price * stockData.supply;
-        await this.deductUserBalance(userId, investmentAmount);
+        const userShares = Math.floor(stockData.supply * 0.35); // 35% 的股份
+        const actualInvestment = stockData.price * userShares; // 用户实际需要支付的金额
+        await this.deductUserBalance(userId, actualInvestment);
       } catch (balanceError) {
         console.warn('扣除用户余额失败，但股票创建成功:', balanceError);
       }
@@ -126,26 +128,31 @@ export class StockService {
     }
   }
 
-  // 创建流动性池（如果有相关表）
-  private static async createLiquidityPool(stockId: string, price: number, supply: number, userId: string) {
-    // 这里假设有一个 liquidity_pools 表
-    // 如果没有这个表，这个方法会静默失败
+  // 创建流动性池（平台提供65%的流动性）
+  private static async createLiquidityPool(stockId: string, price: number, totalSupply: number, userId: string) {
+    // 65% 的股份进入流动性池，35% 归创建者
+    const poolSupply = Math.floor(totalSupply * 0.65); // 65% 进入流动性池
+    const poolYoloReserve = price * poolSupply; // 平台提供的YOLO币储备
+    const kConstant = poolYoloReserve * poolSupply; // AMM 恒定乘积 k = x * y
+    
     try {
       const { error } = await supabase
         .from('liquidity_pools')
         .insert({
           stock_id: stockId,
           creator_id: userId,
-          initial_price: price,
-          total_supply: supply,
-          available_supply: supply,
-          yolo_reserve: price * supply, // 初始YOLO币储备
+          yolo_reserve: poolYoloReserve, // YOLO币储备
+          stock_reserve: poolSupply, // 股票储备
+          total_supply: totalSupply, // 总发行量
+          k_constant: kConstant, // AMM 恒定乘积
           created_at: new Date().toISOString()
         });
 
       if (error && !error.message.includes('relation "liquidity_pools" does not exist')) {
         throw error;
       }
+      
+      console.log(`流动性池创建成功：${poolSupply} 股份 (${(poolSupply/totalSupply*100).toFixed(1)}%) 进入交易池，平台提供 ${poolYoloReserve} YOLO 币流动性，K常数: ${kConstant}`);
     } catch (error: any) {
       if (!error.message?.includes('relation "liquidity_pools" does not exist')) {
         throw error;
@@ -154,23 +161,28 @@ export class StockService {
   }
 
   // 创建用户持股记录
-  private static async createUserHolding(stockId: string, userId: string, shares: number, price: number) {
-    // 这里假设有一个 user_holdings 表
+  private static async createUserHolding(stockId: string, userId: string, totalSupply: number, price: number) {
+    // 用户自动获得所创建股票的 35% 持股
+    const userShares = Math.floor(totalSupply * 0.35); // 35% 的股份
+    const userInvestment = price * userShares; // 用户实际投资金额
+    
     try {
       const { error } = await supabase
         .from('user_holdings')
         .insert({
           user_id: userId,
           stock_id: stockId,
-          shares: shares,
+          shares: userShares,
           average_price: price,
-          total_investment: price * shares,
+          total_investment: userInvestment,
           created_at: new Date().toISOString()
         });
 
       if (error && !error.message.includes('relation "user_holdings" does not exist')) {
         throw error;
       }
+      
+      console.log(`用户 ${userId} 获得股票 ${stockId} 的 ${userShares} 股份 (${(userShares/totalSupply*100).toFixed(1)}%)`);
     } catch (error: any) {
       if (!error.message?.includes('relation "user_holdings" does not exist')) {
         throw error;
@@ -180,7 +192,6 @@ export class StockService {
 
   // 扣除用户YOLO币余额
   private static async deductUserBalance(userId: string, amount: number) {
-    // 这里假设有一个 user_balances 表
     try {
       // 首先获取当前余额
       const { data: currentBalance, error: fetchError } = await supabase
@@ -198,8 +209,7 @@ export class StockService {
         const { error: updateError } = await supabase
           .from('user_balances')
           .update({ 
-            balance: currentBalance.balance - amount,
-            updated_at: new Date().toISOString()
+            balance: currentBalance.balance - amount
           })
           .eq('user_id', userId);
 
@@ -213,8 +223,7 @@ export class StockService {
           .insert({
             user_id: userId,
             balance: 8000 - amount,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
+            created_at: new Date().toISOString()
           });
 
         if (insertError && !insertError.message.includes('relation "user_balances" does not exist')) {
@@ -225,6 +234,30 @@ export class StockService {
       if (!error.message?.includes('relation "user_balances" does not exist')) {
         throw error;
       }
+    }
+  }
+
+  // 验证投资金额（移除限制，只检查余额是否足够）
+  static async validateInvestment(userId: string, price: number, supply: number): Promise<{valid: boolean, message?: string}> {
+    try {
+      const userBalance = await this.getUserBalance(userId);
+      const userShares = Math.floor(supply * 0.35); // 35% 的股份
+      const requiredAmount = price * userShares; // 用户需要支付的金额
+      
+      if (requiredAmount > userBalance.balance) {
+        return {
+          valid: false,
+          message: `余额不足。需要 ${requiredAmount.toLocaleString()} YOLO，当前余额 ${userBalance.balance.toLocaleString()} YOLO`
+        };
+      }
+      
+      return { valid: true };
+    } catch (error) {
+      console.error('验证投资失败:', error);
+      return {
+        valid: false,
+        message: '验证投资时发生错误'
+      };
     }
   }
 
@@ -333,37 +366,7 @@ export class StockService {
     return `https://api.dicebear.com/7.x/initials/svg?seed=${seed}&backgroundColor=random`;
   }
 
-  // 验证投资金额是否合理
-  static async validateInvestment(userId: string, price: number, supply: number): Promise<{ valid: boolean; message?: string }> {
-    try {
-      const userBalance = await this.getUserBalance(userId);
-      const totalInvestment = price * supply;
-      
-      if (totalInvestment > userBalance.balance) {
-        return {
-          valid: false,
-          message: `投资金额 ${totalInvestment} YOLO 超过了您的余额 ${userBalance.balance} YOLO`
-        };
-      }
-      
-      if (totalInvestment > userBalance.maxInvestment) {
-        return {
-          valid: false,
-          message: `投资金额 ${totalInvestment} YOLO 超过了建议的最大投资额 ${userBalance.maxInvestment} YOLO（余额的20%）`
-        };
-      }
-      
-      return { valid: true };
-    } catch (error) {
-      console.error('Error validating investment:', error);
-      return {
-        valid: false,
-        message: '验证投资金额时发生错误'
-      };
-    }
-  }
-
-  // 获取股票详细信息（包含创建者信息）
+  // 获取股票详情
   static async getStockDetails(stockId: string): Promise<Stock | null> {
     try {
       this.checkSupabaseConfig();
@@ -386,7 +389,7 @@ export class StockService {
     }
   }
 
-  // 获取用户的持股信息
+  // 获取用户持股信息
   static async getUserHoldings(userId: string): Promise<any[]> {
     try {
       this.checkSupabaseConfig();
@@ -397,30 +400,34 @@ export class StockService {
           .from('user_holdings')
           .select(`
             *,
-            stock:stock_id (
-              id,
-              name,
-              symbol,
-              image
-            )
+            stock:stock_id (*)
           `)
-          .eq('user_id', userId)
-          .order('created_at', { ascending: false });
+          .eq('user_id', userId);
 
         if (error && !error.message.includes('relation "user_holdings" does not exist')) {
           throw error;
         }
 
-        return data || [];
-      } catch (error: any) {
-        if (error.message?.includes('relation "user_holdings" does not exist')) {
-          // 如果没有持股表，返回用户创建的股票
-          return await this.getUserStocks(userId);
+        if (data && data.length > 0) {
+          return data;
         }
-        throw error;
+      } catch (error: any) {
+        if (!error.message?.includes('relation "user_holdings" does not exist')) {
+          console.warn('获取用户持股失败:', error);
+        }
       }
+
+      // 如果 user_holdings 表不存在或没有数据，回退到用户创建的股票
+      const userStocks = await this.getUserStocks(userId);
+      return userStocks.map(stock => ({
+        stock_id: stock.id,
+        shares: Math.floor(stock.supply * 0.35), // 35% 持股
+        average_price: stock.price || 1,
+        total_investment: (stock.price || 1) * Math.floor(stock.supply * 0.35),
+        stock: stock
+      }));
     } catch (error) {
-      console.error('Error getting user holdings:', error);
+      console.error('Error in getUserHoldings:', error);
       return [];
     }
   }
