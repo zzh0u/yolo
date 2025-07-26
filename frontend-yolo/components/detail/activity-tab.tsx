@@ -17,7 +17,9 @@ interface ActivityDisplayItem {
 }
 
 const parseDate = (dateStr: string): Date => {
-  return new Date(dateStr.replace('年', '-').replace('月', '-').replace('日', ''));
+  // 支持格式: "2024年1月15日 14:30" 或 "2024年1月15日"
+  const cleanStr = dateStr.replace('年', '-').replace('月', '-').replace('日', '');
+  return new Date(cleanStr);
 };
 
 const ActivityTab = ({ highlightDate }: { highlightDate?: string }) => {
@@ -44,7 +46,7 @@ const ActivityTab = ({ highlightDate }: { highlightDate?: string }) => {
   const convertToDisplayFormat = (dbActivities: UserActivity[]): ActivityDisplayItem[] => {
     return dbActivities.map(activity => ({
       id: activity.id,
-      date: UserActivityService.formatDateToChinese(activity.activity_date),
+      date: UserActivityService.formatCreatedAtToChinese(activity.created_at),
       title: activity.title,
       description: activity.content,
     }));

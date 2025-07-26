@@ -19,7 +19,7 @@ export interface ActivityFormData {
 
 export class UserActivityService {
   /**
-   * 获取指定用户的所有活动，按日期倒序排列
+   * 获取指定用户的所有活动，按创建时间倒序排列
    */
   static async getUserActivities(userId: string): Promise<UserActivity[]> {
     try {
@@ -27,7 +27,7 @@ export class UserActivityService {
         .from('user_activities')
         .select('*')
         .eq('user_id', userId)
-        .order('activity_date', { ascending: false });
+        .order('created_at', { ascending: false });
 
       if (error) {
         console.error('获取用户活动失败:', error);
@@ -122,6 +122,19 @@ export class UserActivityService {
     const month = date.getMonth() + 1;
     const day = date.getDate();
     return `${year}年${month}月${day}日`;
+  }
+
+  /**
+   * 格式化created_at时间戳为中文格式，显示到分钟 (YYYY年MM月DD日 HH:mm)
+   */
+  static formatCreatedAtToChinese(createdAtStr: string): string {
+    const date = new Date(createdAtStr);
+    const year = date.getFullYear();
+    const month = date.getMonth() + 1;
+    const day = date.getDate();
+    const hours = date.getHours().toString().padStart(2, '0');
+    const minutes = date.getMinutes().toString().padStart(2, '0');
+    return `${year}年${month}月${day}日 ${hours}:${minutes}`;
   }
 
   /**
