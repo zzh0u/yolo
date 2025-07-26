@@ -169,7 +169,7 @@ export default function ProductPage() {
               <PlusCircle size={18} />
               <span>Create</span>
             </Link>
-            <Link href="/dashboard" className="flex flex-row items-center gap-2 px-3">
+            <Link href="/profile" className="flex flex-row items-center gap-2 px-3">
               <User size={18} />
               <span>Me</span>
             </Link>

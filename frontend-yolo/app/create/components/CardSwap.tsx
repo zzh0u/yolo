@@ -230,10 +230,6 @@ function CardSwap({
     [children]
   );
 
-  type CardCloneProps = CardProps & React.RefAttributes<HTMLDivElement> & {
-    onClick: () => void;
-  };
-
   return (
     <div
       ref={containerRef}
@@ -257,7 +253,8 @@ function CardSwap({
             width: typeof width === 'number' ? Math.min(width - 40, 420) : 420,
             height: typeof height === 'number' ? Math.min(height - 40, 280) : 280,
           },
-        } satisfies CardCloneProps;
+          children: (child as any).props?.children,
+        };
 
         return cloneElement(child as CardElement, cardProps);
       })}
