@@ -222,19 +222,19 @@ export default function Profile() {
       </div>
       
       {/* 内容层 */}
-      <div className="relative z-10">{/* 主要内容区域 */}
+      <div className="relative z-10 pointer-events-auto">{/* 主要内容区域 */}
       <div className="max-w-7xl mx-auto px-6 py-24">
         <Tabs defaultValue="profile" className="w-full">
-          <TabsList className="grid w-full grid-cols-3 bg-[#1a1a1c] border-gray-700">
-            <TabsTrigger value="profile" className="data-[state=active]:bg-gray-700">
+          <TabsList className="grid w-full grid-cols-3 bg-black/20 backdrop-blur-md border-white/20">
+            <TabsTrigger value="profile" className="data-[state=active]:bg-white/20">
               <User className="w-4 h-4 mr-2" />
               个人信息
             </TabsTrigger>
-            <TabsTrigger value="holdings" className="data-[state=active]:bg-gray-700">
+            <TabsTrigger value="holdings" className="data-[state=active]:bg-white/20">
               <Wallet className="w-4 h-4 mr-2" />
               我的持仓
             </TabsTrigger>
-            <TabsTrigger value="stocks" className="data-[state=active]:bg-gray-700">
+            <TabsTrigger value="stocks" className="data-[state=active]:bg-white/20">
               <BarChart3 className="w-4 h-4 mr-2" />
               我的股票
             </TabsTrigger>
@@ -243,7 +243,7 @@ export default function Profile() {
           {/* 个人信息标签页 */}
           <TabsContent value="profile" className="mt-6">
             <div className="flex justify-center">
-              <Card className="w-full max-w-md bg-[#1a1a1c] border-gray-700 p-8">
+              <Card className="w-full max-w-md bg-black/20 backdrop-blur-md border-white/20 p-8">
                 <div className="flex flex-col items-center space-y-6">
                   {/* 头像 */}
                   <div className="relative">
@@ -357,7 +357,7 @@ export default function Profile() {
             <div className="space-y-6">
               {/* 持仓概览 */}
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <Card className="bg-[#1a1a1c] border-gray-700 p-6">
+                <Card className="bg-black/20 backdrop-blur-md border-white/20 p-6">
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm text-gray-400">总持仓价值</p>
@@ -367,7 +367,7 @@ export default function Profile() {
                   </div>
                 </Card>
                 
-                <Card className="bg-[#1a1a1c] border-gray-700 p-6">
+                <Card className="bg-black/20 backdrop-blur-md border-white/20 p-6">
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm text-gray-400">总投资金额</p>
@@ -377,7 +377,7 @@ export default function Profile() {
                   </div>
                 </Card>
                 
-                <Card className="bg-[#1a1a1c] border-gray-700 p-6">
+                <Card className="bg-black/20 backdrop-blur-md border-white/20 p-6">
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm text-gray-400">总盈亏</p>
@@ -392,7 +392,7 @@ export default function Profile() {
                   </div>
                 </Card>
                 
-                <Card className="bg-[#1a1a1c] border-gray-700 p-6">
+                <Card className="bg-black/20 backdrop-blur-md border-white/20 p-6">
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm text-gray-400">盈亏比例</p>
@@ -409,7 +409,7 @@ export default function Profile() {
               </div>
 
               {/* 持仓列表 */}
-              <Card className="bg-[#1a1a1c] border-gray-700">
+              <Card className="bg-black/20 backdrop-blur-md border-white/20">
                 <div className="p-6">
                   <h3 className="text-lg font-semibold text-white mb-4">持仓详情</h3>
                   {loadingData ? (
@@ -429,7 +429,7 @@ export default function Profile() {
                       {holdings.map((holding) => (
                         <div 
                           key={holding.id} 
-                          className="flex items-center justify-between p-4 bg-gray-800/50 rounded-lg hover:bg-gray-800 cursor-pointer transition-colors"
+                          className="flex items-center justify-between p-4 bg-white/10 backdrop-blur-sm rounded-lg hover:bg-white/20 cursor-pointer transition-colors"
                           onClick={() => router.push(`/explore/${holding.stock.symbol}`)}
                         >
                           <div className="flex items-center space-x-4">
@@ -488,7 +488,7 @@ export default function Profile() {
 
           {/* 我的股票标签页 */}
           <TabsContent value="stocks" className="mt-6">
-            <Card className="bg-[#1a1a1c] border-gray-700">
+            <Card className="bg-black/20 backdrop-blur-md border-white/20">
               <div className="p-6">
                 <div className="flex items-center justify-between mb-6">
                   <h3 className="text-lg font-semibold text-white">我创建的股票</h3>
@@ -518,7 +518,7 @@ export default function Profile() {
                     {myStocks.map((stock) => (
                       <Card 
                         key={stock.id} 
-                        className="bg-gray-800/50 border-gray-600 hover:bg-gray-800 cursor-pointer transition-colors"
+                        className="bg-white/10 backdrop-blur-sm border-white/20 hover:bg-white/20 cursor-pointer transition-colors"
                         onClick={() => router.push(`/explore/${stock.symbol}`)}
                       >
                         <div className="p-6">
@@ -580,21 +580,21 @@ export default function Profile() {
       </div>
 
       {/* 固定在右下角的导航按钮 */}
-      <div className="fixed bottom-6 right-6 z-50 bg-gray-200 rounded-full text-black">
+      <div className="fixed bottom-6 right-6 z-50">
         <GlassSurface 
-          className="w-auto h-16 rounded-full"
-          brightness={200}
+          className="w-auto h-16 rounded-full bg-black/20 backdrop-blur-md border-white/20"
+          brightness={150}
         >
-          <div className="flex flex-row items-center justify-evenly gap-4 px-6">
-            <Link href="/" className="flex flex-row items-center gap-2 px-3">
+          <div className="flex flex-row items-center justify-evenly gap-4 px-6 text-white">
+            <Link href="/" className="flex flex-row items-center gap-2 px-3 hover:bg-white/20 rounded-full transition-colors">
               <Home size={18} />
               <span>Intro</span>
             </Link>
-            <Link href="/create" className="flex flex-row items-center gap-2 px-3">
+            <Link href="/create" className="flex flex-row items-center gap-2 px-3 hover:bg-white/20 rounded-full transition-colors">
               <PlusCircle size={18} />
               <span>Create</span>
             </Link>
-            <Link href="/profile" className="flex flex-row items-center gap-2 px-3 bg-black/20 rounded-full">
+            <Link href="/profile" className="flex flex-row items-center gap-2 px-3 bg-white/30 rounded-full">
               <User size={18} />
               <span>Me</span>
             </Link>
