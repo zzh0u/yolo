@@ -177,7 +177,10 @@ const Timeline = () => {
   return (
 
     <div className="w-full max-w-2xl mx-auto text-white h-screen flex flex-col px-12 py-12">
+      {/* 创建帖子 */}
       <CreatePost />
+
+      {/* 帖子列表 */}
       <div className="flex-1 overflow-y-auto">
         {threads.map(thread => (
           <div key={thread.id} className="flex gap-4 p-4 border-b border-gray-800">

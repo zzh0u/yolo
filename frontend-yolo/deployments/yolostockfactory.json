@@ -1,0 +1,10 @@
+{
+  "network": "injEVM",
+  "contractName": "YoloStockFactory",
+  "address": "0xcb1B0AC8eD07ecaeB34A27802a534A31dCA77743",
+  "deployer": "0xe5972445005d996ea11710A8F3D6d81c914fC62d",
+  "deploymentTime": "2025-07-26T09:47:11.870Z",
+  "constructorArgs": {
+    "yoloTokenAddress": "0xd8a5caa98b17993DB1961B42eE5b01894499296F"
+  }
+}

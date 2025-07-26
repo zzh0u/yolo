@@ -1,0 +1,17 @@
+{
+  "network": "injEVM",
+  "contractName": "YoloToken",
+  "address": "0xd8a5caa98b17993DB1961B42eE5b01894499296F",
+  "deployer": "0xe5972445005d996ea11710A8F3D6d81c914fC62d",
+  "deploymentTime": "2025-07-26T09:44:18.250Z",
+  "constructorArgs": {
+    "name": "YOLO Token",
+    "symbol": "YOLO",
+    "initialHolders": [
+      "0xe5972445005d996ea11710A8F3D6d81c914fC62d"
+    ],
+    "initialAmounts": [
+      "32000000000000000000000"
+    ]
+  }
+}
