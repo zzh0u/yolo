@@ -67,10 +67,35 @@ export async function signup(formData: FormData) {
     password: formData.get('password') as string,
   }
 
-  const { error } = await supabase.auth.signUp(data)
+  const { data: authData, error } = await supabase.auth.signUp(data)
 
   if (error) {
     throw new Error(error.message)
+  }
+
+  // 如果注册成功且有用户ID，为用户分配初始 YOLO 币余额
+  if (authData.user?.id) {
+    try {
+      // 尝试为新用户创建初始余额记录
+      const { error: balanceError } = await supabase
+        .from('user_balances')
+        .insert({
+          user_id: authData.user.id,
+          balance: 8000.0,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+
+      if (balanceError) {
+        // 如果 user_balances 表不存在，记录警告但不影响注册流程
+        console.warn('无法创建用户余额记录，可能是因为 user_balances 表不存在:', balanceError.message)
+      } else {
+        console.log(`成功为用户 ${authData.user.id} 分配 8000 YOLO 币`)
+      }
+    } catch (balanceError) {
+      // 余额分配失败不应该影响注册流程
+      console.warn('分配初始余额时发生错误:', balanceError)
+    }
   }
 
   revalidatePath('/', 'layout')

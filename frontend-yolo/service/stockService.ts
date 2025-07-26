@@ -26,8 +26,32 @@ export class StockService {
           .eq('user_id', userId)
           .single();
 
-        if (balanceError && !balanceError.message.includes('relation "user_balances" does not exist')) {
-          console.warn('获取用户余额时出错:', balanceError);
+        if (balanceError) {
+          if (balanceError.code === 'PGRST116') {
+            // 用户余额记录不存在，为新用户创建初始余额
+            try {
+              const { error: insertError } = await supabase
+                .from('user_balances')
+                .insert({
+                  user_id: userId,
+                  balance: 8000.0,
+                  created_at: new Date().toISOString(),
+                  updated_at: new Date().toISOString()
+                });
+
+              if (insertError && !insertError.message.includes('relation "user_balances" does not exist')) {
+                console.warn('创建用户余额记录失败:', insertError);
+              } else if (!insertError) {
+                console.log(`为用户 ${userId} 创建了初始余额记录`);
+              }
+            } catch (createError: any) {
+              if (!createError.message?.includes('relation "user_balances" does not exist')) {
+                console.warn('创建用户余额记录时发生错误:', createError);
+              }
+            }
+          } else if (!balanceError.message.includes('relation "user_balances" does not exist')) {
+            console.warn('获取用户余额时出错:', balanceError);
+          }
         } else if (balanceData) {
           balance = balanceData.balance;
         }
