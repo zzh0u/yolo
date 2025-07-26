@@ -22,9 +22,14 @@ coverage.html
 # 环境变量文件
 .env
 .env.local
-.env.development.local
-.env.test.local
-.env.production.local
+.env.production
+.env.development
+
+# 但保留模板文件
+!.env.example
+
+# Docker 相关
+.dockerignore
 
 # 日志文件
 *.log
